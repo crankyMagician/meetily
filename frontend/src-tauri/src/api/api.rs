@@ -9,7 +9,7 @@ use crate::{
         models::MeetingModel,
         repositories::{
             meeting::MeetingsRepository, setting::SettingsRepository,
-            transcript::TranscriptsRepository,
+            speaker::SpeakerRepository, transcript::TranscriptsRepository,
         },
     },
     onboarding::load_onboarding_status,
@@ -182,13 +182,16 @@ pub struct TranscriptSegment {
     pub id: String,
     pub text: String,
     pub timestamp: String,
-    // NEW: Recording-relative timestamps for playback synchronization
+    // Recording-relative timestamps for playback synchronization
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_start_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_end_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<f64>,
+    // Speaker identification: "mic" or "system"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1429,4 +1432,100 @@ pub async fn api_get_meeting_context<R: Runtime>(
         "context_type": context_type,
         "context_notes": context_notes,
     }))
+}
+
+// ===== User Display Name Commands =====
+
+#[tauri::command]
+pub async fn api_get_user_display_name<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let pool = state.db_manager.pool();
+    SettingsRepository::get_user_display_name(pool)
+        .await
+        .map_err(|e| format!("Failed to get user display name: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_set_user_display_name<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    name: String,
+) -> Result<(), String> {
+    let pool = state.db_manager.pool();
+    SettingsRepository::set_user_display_name(pool, &name)
+        .await
+        .map_err(|e| format!("Failed to set user display name: {}", e))
+}
+
+// ===== Speaker Commands =====
+
+#[tauri::command]
+pub async fn api_get_meeting_speakers<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<crate::database::repositories::speaker::MeetingSpeaker>, String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::get_meeting_speakers(pool, &meeting_id)
+        .await
+        .map_err(|e| format!("Failed to get meeting speakers: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_set_speaker_name<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker_key: String,
+    display_name: String,
+) -> Result<(), String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::set_speaker_name(pool, &meeting_id, &speaker_key, &display_name, "user")
+        .await
+        .map_err(|e| format!("Failed to set speaker name: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_identify_speakers<R: Runtime>(
+    app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    model: String,
+    model_name: String,
+) -> Result<Vec<crate::chat::speaker_identifier::SpeakerSuggestion>, String> {
+    let pool = state.db_manager.pool();
+    crate::chat::speaker_identifier::SpeakerIdentifier::identify_speakers(
+        &app, pool, &meeting_id, &model, &model_name,
+    )
+    .await
+}
+
+// ===== Transcript Speaker Assignment Commands =====
+
+#[tauri::command]
+pub async fn api_update_transcript_speaker<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    transcript_id: String,
+    speaker: Option<String>,
+) -> Result<(), String> {
+    let pool = state.db_manager.pool();
+    TranscriptsRepository::update_speaker(pool, &transcript_id, speaker.as_deref())
+        .await
+        .map_err(|e| format!("Failed to update transcript speaker: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_set_unassigned_speakers<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker: String,
+) -> Result<u64, String> {
+    let pool = state.db_manager.pool();
+    TranscriptsRepository::set_unassigned_speakers(pool, &meeting_id, &speaker)
+        .await
+        .map_err(|e| format!("Failed to set unassigned speakers: {}", e))
 }

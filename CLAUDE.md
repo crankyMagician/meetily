@@ -475,7 +475,17 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 - Meeting context fields (`context_type`, `context_notes`) stored on `meetings` table
 - Context commands: `api_save_meeting_context`, `api_get_meeting_context` in `api/api.rs`
 
-### Known Issues (Grading & Chat)
+**Speaker Assignment** (new):
+- [frontend/src/components/VirtualizedTranscriptView.tsx](frontend/src/components/VirtualizedTranscriptView.tsx) - `SpeakerPopover` component for assigning speakers via popover menu (quick picks + custom name input)
+- [frontend/src/components/MeetingDetails/SpeakerBadge.tsx](frontend/src/components/MeetingDetails/SpeakerBadge.tsx) - Speaker badge display with color coding
+- [frontend/src-tauri/src/chat/speaker_identifier.rs](frontend/src-tauri/src/chat/speaker_identifier.rs) - LLM-based speaker identification (suggests speaker labels for system audio segments)
+- [frontend/src-tauri/src/database/repositories/speaker.rs](frontend/src-tauri/src/database/repositories/speaker.rs) - Speaker suggestions DB repository
+
+### Known Issues
 
 1. **Grading evaluates the whole conversation** — Currently grades all speakers as one. Needs per-speaker analysis once speaker diarization labels are available in transcripts.
 2. **Chat with BuiltInAI fails** — "Failed to add token to batch" error when using local BuiltInAI models. The full transcript context can exceed the model's context window. Workaround: use a cloud provider (OpenAI, Claude, Groq) or Ollama with a model that has a larger context window. Fix needed: truncate/summarize context to fit model limits in `chat/context_builder.rs`.
+3. **Summary and Chat panels not scrollable** — The Summary and Chat tab content areas in the meeting details page overflow without scrolling. The panel containers need `overflow-y-auto` and a constrained height (e.g., `flex-1 min-h-0`) to enable scrolling within the tabbed layout.
+4. **App performance is slow** — The meeting details page can feel sluggish, especially with large transcripts. Contributing factors: (a) all transcript segments render even when off-screen on the details page (virtualization only kicks in at 10+ segments in `VirtualizedTranscriptView`), (b) frequent re-renders from polling hooks (`useGrading`, `useChat`), (c) the grading and chat panels may trigger layout recalculations. Profiling with React DevTools is needed to identify the hottest paths.
+5. **Custom speaker names show gray color** — When assigning a custom speaker name (e.g., "John"), `SpeakerBadge` falls back to `DEFAULT_COLOR` (gray) because only `mic`, `system`, and `system_speaker_1/2/3` have entries in `SPEAKER_COLORS`. Fix: generate deterministic colors from the speaker name string (e.g., hash-based hue) so each unique custom name gets a distinct color.
+6. **Speaker diarization is source-based, not voice-based** — The current system tags segments as `mic` (DeviceType::Microphone) or `system` (DeviceType::System) based on which audio input device captured them. This means "You" = microphone audio and "Other" = system/speaker audio. It does NOT perform true speaker diarization (voice fingerprinting to distinguish Person A from Person B within the same audio stream). The `speaker_identifier.rs` module exists as an LLM-based post-hoc approach that analyzes transcript text patterns to suggest speaker labels for system audio segments, but it cannot distinguish individual voices in real-time. True diarization would require integrating a model like `pyannote.audio` or `NeMo MSDD` into the audio pipeline to cluster voice embeddings per speaker.

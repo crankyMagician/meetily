@@ -1,13 +1,14 @@
 "use client";
 
-import { GradeResult } from '@/types';
+import { useState } from 'react';
+import { GradeResult, GradingOptions } from '@/types';
 import { LoaderIcon, Award, TrendingUp, Lightbulb, Target } from 'lucide-react';
 
 interface GradePanelProps {
   status: 'idle' | 'pending' | 'completed' | 'failed';
   result: GradeResult | null;
   error: string | null;
-  onGenerate: () => void;
+  onGenerate: (options?: GradingOptions) => void;
 }
 
 function ScoreBar({ score, label }: { score: number; label: string }) {
@@ -41,21 +42,87 @@ function OverallScore({ score }: { score: number }) {
   );
 }
 
+function GradingConfigForm({ onSubmit }: { onSubmit: (options: GradingOptions) => void }) {
+  const [gradeTarget, setGradeTarget] = useState<'me' | 'other' | 'both'>('me');
+  const [userRole, setUserRole] = useState('');
+  const [focusAreas, setFocusAreas] = useState('');
+
+  return (
+    <div className="space-y-4">
+      {/* Grade Target */}
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-2 block">Who to grade</label>
+        <div className="flex gap-2">
+          {([
+            { value: 'me' as const, label: 'Grade me' },
+            { value: 'other' as const, label: 'Other participant' },
+            { value: 'both' as const, label: 'Grade both' },
+          ]).map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setGradeTarget(option.value)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                gradeTarget === option.value
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Your Role */}
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Your role (optional)</label>
+        <input
+          type="text"
+          value={userRole}
+          onChange={(e) => setUserRole(e.target.value)}
+          placeholder="e.g., Sales rep, Interviewer, Manager"
+          className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Focus Areas */}
+      <div>
+        <label className="text-sm font-medium text-gray-700 mb-1 block">Focus areas (optional)</label>
+        <textarea
+          value={focusAreas}
+          onChange={(e) => setFocusAreas(e.target.value)}
+          placeholder="e.g., How well I handled the pricing objection, clarity of my technical explanation"
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        />
+      </div>
+
+      <button
+        onClick={() => onSubmit({
+          grade_target: gradeTarget,
+          user_role: userRole || undefined,
+          focus_areas: focusAreas || undefined,
+        })}
+        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+      >
+        Generate Grade
+      </button>
+    </div>
+  );
+}
+
 export function GradePanel({ status, result, error, onGenerate }: GradePanelProps) {
   if (status === 'idle') {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <Award className="w-12 h-12 text-gray-300 mb-4" />
-        <h3 className="text-lg font-medium text-gray-700 mb-2">Communication Grade</h3>
-        <p className="text-sm text-gray-500 mb-6 max-w-sm">
-          Get AI-powered feedback on your communication skills based on this meeting&apos;s transcript.
+      <div className="flex flex-col items-center justify-center h-full p-6">
+        <Award className="w-10 h-10 text-gray-300 mb-3" />
+        <h3 className="text-lg font-medium text-gray-700 mb-1">Communication Grade</h3>
+        <p className="text-sm text-gray-500 mb-5 max-w-sm text-center">
+          Get AI-powered feedback on communication skills based on this meeting&apos;s transcript.
         </p>
-        <button
-          onClick={onGenerate}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-        >
-          Generate Grade
-        </button>
+        <div className="w-full max-w-sm">
+          <GradingConfigForm onSubmit={onGenerate} />
+        </div>
       </div>
     );
   }
@@ -64,7 +131,7 @@ export function GradePanel({ status, result, error, onGenerate }: GradePanelProp
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <LoaderIcon className="w-8 h-8 animate-spin text-blue-500 mb-4" />
-        <p className="text-sm text-gray-600">Analyzing your communication...</p>
+        <p className="text-sm text-gray-600">Analyzing communication...</p>
       </div>
     );
   }
@@ -74,7 +141,7 @@ export function GradePanel({ status, result, error, onGenerate }: GradePanelProp
       <div className="flex flex-col items-center justify-center h-full p-8 text-center">
         <p className="text-sm text-red-500 mb-4">{error || 'Grade generation failed'}</p>
         <button
-          onClick={onGenerate}
+          onClick={() => onGenerate()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           Try Again
@@ -165,7 +232,7 @@ export function GradePanel({ status, result, error, onGenerate }: GradePanelProp
       {/* Regenerate */}
       <div className="pt-2 border-t border-gray-100">
         <button
-          onClick={onGenerate}
+          onClick={() => onGenerate()}
           className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
         >
           Regenerate grade

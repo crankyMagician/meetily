@@ -644,6 +644,9 @@ pub fn run() {
             // Meeting context commands
             api::api_save_meeting_context,
             api::api_get_meeting_context,
+            // User display name commands
+            api::api_get_user_display_name,
+            api::api_set_user_display_name,
             // Summary commands
             summary::api_process_transcript,
             summary::api_get_summary,
@@ -670,6 +673,12 @@ pub fn run() {
             chat::api_send_chat_message,
             chat::api_get_chat_history,
             chat::api_list_chat_sessions,
+            // Speaker commands
+            api::api_get_meeting_speakers,
+            api::api_set_speaker_name,
+            api::api_identify_speakers,
+            api::api_update_transcript_speaker,
+            api::api_set_unassigned_speakers,
             openrouter::get_openrouter_models,
             audio::recording_preferences::get_recording_preferences,
             audio::recording_preferences::set_recording_preferences,

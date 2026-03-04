@@ -43,12 +43,12 @@ impl TranscriptsRepository {
 
         info!("Successfully created meeting with id: {}", meeting_id);
 
-        // 2. Save each transcript segment with audio timing fields
+        // 2. Save each transcript segment with audio timing fields and speaker
         for segment in transcripts {
             let transcript_id = format!("transcript-{}", Uuid::new_v4());
             let result = sqlx::query(
-                "INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, audio_end_time, duration)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)"
+                "INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, audio_end_time, duration, speaker)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
             )
             .bind(&transcript_id)
             .bind(&meeting_id)
@@ -57,6 +57,7 @@ impl TranscriptsRepository {
             .bind(segment.audio_start_time)
             .bind(segment.audio_end_time)
             .bind(segment.duration)
+            .bind(&segment.speaker)
             .execute(&mut *transaction)
             .await;
 
@@ -131,6 +132,36 @@ impl TranscriptsRepository {
             .collect();
 
         Ok(results)
+    }
+
+    /// Updates the speaker field for a single transcript.
+    pub async fn update_speaker(
+        pool: &SqlitePool,
+        transcript_id: &str,
+        speaker: Option<&str>,
+    ) -> Result<(), SqlxError> {
+        sqlx::query("UPDATE transcripts SET speaker = ? WHERE id = ?")
+            .bind(speaker)
+            .bind(transcript_id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
+    /// Bulk-updates all NULL-speaker transcripts in a meeting.
+    pub async fn set_unassigned_speakers(
+        pool: &SqlitePool,
+        meeting_id: &str,
+        speaker: &str,
+    ) -> Result<u64, SqlxError> {
+        let result = sqlx::query(
+            "UPDATE transcripts SET speaker = ? WHERE meeting_id = ? AND speaker IS NULL",
+        )
+        .bind(speaker)
+        .bind(meeting_id)
+        .execute(pool)
+        .await?;
+        Ok(result.rows_affected())
     }
 
     /// Helper function to extract a snippet of text around the first match of a query.

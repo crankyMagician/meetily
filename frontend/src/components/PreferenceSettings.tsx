@@ -21,6 +21,38 @@ export function PreferenceSettings() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [previousNotificationsEnabled, setPreviousNotificationsEnabled] = useState<boolean | null>(null);
   const hasTrackedViewRef = useRef(false);
+  const [displayName, setDisplayName] = useState("");
+  const [displayNameSaved, setDisplayNameSaved] = useState(false);
+  const displayNameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load user display name on mount
+  useEffect(() => {
+    const loadDisplayName = async () => {
+      try {
+        const name = await invoke<string | null>("api_get_user_display_name");
+        if (name) setDisplayName(name);
+      } catch (e) {
+        console.error("Failed to load display name:", e);
+      }
+    };
+    loadDisplayName();
+  }, []);
+
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
+    setDisplayNameSaved(false);
+    // Debounce save
+    if (displayNameTimeoutRef.current) clearTimeout(displayNameTimeoutRef.current);
+    displayNameTimeoutRef.current = setTimeout(async () => {
+      try {
+        await invoke("api_set_user_display_name", { name: value });
+        setDisplayNameSaved(true);
+        setTimeout(() => setDisplayNameSaved(false), 2000);
+      } catch (e) {
+        console.error("Failed to save display name:", e);
+      }
+    }, 500);
+  };
 
   // Lazy load preferences on mount (only loads if not already cached)
   useEffect(() => {
@@ -148,6 +180,28 @@ export function PreferenceSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Your Name Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Your Name</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Used to label your microphone audio in transcripts and grading
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => handleDisplayNameChange(e.target.value)}
+              placeholder="Enter your name"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {displayNameSaved && (
+              <span className="text-sm text-green-600">Saved</span>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Notifications Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
         <div className="flex items-center justify-between">

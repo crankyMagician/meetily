@@ -1,3 +1,4 @@
+use crate::chat::context_builder::format_transcripts_with_speakers;
 use crate::database::repositories::{
     grade::GradeRepository, meeting::MeetingsRepository, setting::SettingsRepository,
     transcript::TranscriptsRepository,
@@ -18,6 +19,7 @@ impl GradingService {
         meeting_id: String,
         model_provider: String,
         model_name: String,
+        grading_options: Option<crate::grading::commands::GradingOptions>,
     ) {
         info!(
             "Starting grade generation for meeting: {}, grade: {}",
@@ -111,15 +113,42 @@ impl GradingService {
             }
         };
 
-        let transcript_text: String = transcripts
-            .iter()
-            .map(|t| t.transcript.as_str())
-            .collect::<Vec<_>>()
-            .join("\n");
+        // Get user display name for speaker labels
+        let user_name = SettingsRepository::get_user_display_name(&pool)
+            .await
+            .ok()
+            .flatten();
 
-        // Build prompt
+        // Format transcript with speaker labels
+        let transcript_text = format_transcripts_with_speakers(&transcripts, user_name.as_deref());
+
+        // Truncate transcript to fit model context window
+        let max_chars: usize = match provider {
+            LLMProvider::BuiltInAI => 80_000,
+            _ => 300_000,
+        };
+        let transcript_text = if transcript_text.len() > max_chars {
+            let break_point = transcript_text[..max_chars].rfind('\n').unwrap_or(max_chars);
+            format!(
+                "{}\n\n[Transcript truncated — {} of {} characters shown]",
+                &transcript_text[..break_point],
+                break_point,
+                transcript_text.len()
+            )
+        } else {
+            transcript_text
+        };
+
+        // Build prompt with grading options
+        let grade_target = match grading_options.as_ref().and_then(|o| o.grade_target.as_deref()) {
+            Some("other") => "the other participant",
+            Some("both") => "all participants",
+            _ => user_name.as_deref().unwrap_or("the participant"),
+        };
+        let focus_areas = grading_options.as_ref().and_then(|o| o.focus_areas.as_deref());
+        let user_role = grading_options.as_ref().and_then(|o| o.user_role.as_deref());
         let system_prompt =
-            build_grading_prompt(context_type.as_deref(), context_notes.as_deref());
+            build_grading_prompt(context_type.as_deref(), context_notes.as_deref(), Some(grade_target), focus_areas, user_role);
         let user_prompt = format!(
             "<transcript>\n{}\n</transcript>",
             transcript_text

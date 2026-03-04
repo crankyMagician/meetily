@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useReducer, startTransition, useEffect, useState, memo } from "react";
+import { useCallback, useRef, useReducer, startTransition, useEffect, useState, memo, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAutoScroll } from "@/hooks/useAutoScroll";
 import { useTranscriptStreaming } from "@/hooks/useTranscriptStreaming";
@@ -9,6 +9,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { RecordingStatusBar } from "./RecordingStatusBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TranscriptSegmentData } from "@/types";
+import { SpeakerBadge } from "./MeetingDetails/SpeakerBadge";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Play } from "lucide-react";
 
 export interface VirtualizedTranscriptViewProps {
     /** Transcript segments to display */
@@ -34,6 +37,16 @@ export interface VirtualizedTranscriptViewProps {
     totalCount?: number;
     loadedCount?: number;
     onLoadMore?: () => void;
+
+    /** Callback when speaker is changed on a segment */
+    onSpeakerChange?: (segmentId: string, newSpeaker: string | null) => void;
+
+    /** Current audio playback time in seconds */
+    currentPlaybackTime?: number;
+    /** Whether audio is currently playing */
+    isAudioPlaying?: boolean;
+    /** Callback to play audio from a specific timestamp */
+    onPlaySegment?: (startTime: number) => void;
 }
 
 // Threshold for enabling virtualization (below this, use simple rendering)
@@ -63,6 +76,100 @@ function cleanStopWords(text: string): string {
     return cleanedText.replace(/\s+/g, ' ').trim();
 }
 
+// Speaker assignment popover component
+const SpeakerPopover = memo(function SpeakerPopover({
+    speaker,
+    speakerLabel,
+    onSelect,
+}: {
+    speaker?: string;
+    speakerLabel?: string;
+    onSelect: (value: string | null) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const [customName, setCustomName] = useState('');
+
+    const handleSelect = (value: string | null) => {
+        onSelect(value);
+        setOpen(false);
+        setCustomName('');
+    };
+
+    const handleCustomSubmit = () => {
+        const trimmed = customName.trim();
+        if (trimmed) {
+            handleSelect(trimmed);
+        }
+    };
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                {speaker && speakerLabel ? (
+                    <button type="button" className="cursor-pointer" title="Click to change speaker">
+                        <SpeakerBadge name={speakerLabel} speakerKey={speaker} />
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        className="inline-block px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 bg-gray-50 text-gray-400 cursor-pointer hover:border-gray-400 hover:text-gray-500"
+                        title="Click to assign speaker"
+                    >
+                        Unassigned
+                    </button>
+                )}
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="start" sideOffset={4}>
+                <div className="flex flex-col gap-1">
+                    <button
+                        type="button"
+                        onClick={() => handleSelect('mic')}
+                        className={`text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${speaker === 'mic' ? 'bg-gray-100 font-medium' : ''}`}
+                    >
+                        You
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSelect('system')}
+                        className={`text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${speaker === 'system' ? 'bg-gray-100 font-medium' : ''}`}
+                    >
+                        Other
+                    </button>
+                    <div className="border-t border-gray-200 my-1" />
+                    <form
+                        onSubmit={(e) => { e.preventDefault(); handleCustomSubmit(); }}
+                        className="flex gap-1"
+                    >
+                        <input
+                            type="text"
+                            value={customName}
+                            onChange={(e) => setCustomName(e.target.value)}
+                            placeholder="Custom name..."
+                            className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-blue-400"
+                            autoFocus
+                        />
+                        <button
+                            type="submit"
+                            disabled={!customName.trim()}
+                            className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Set
+                        </button>
+                    </form>
+                    <div className="border-t border-gray-200 my-1" />
+                    <button
+                        type="button"
+                        onClick={() => handleSelect(null)}
+                        className="text-left px-2 py-1.5 rounded text-sm text-gray-500 hover:bg-gray-100"
+                    >
+                        Unassign
+                    </button>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+});
+
 // Memoized transcript segment component
 const TranscriptSegment = memo(function TranscriptSegment({
     id,
@@ -71,6 +178,10 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence,
     isStreaming,
     showConfidence,
+    speaker,
+    onSpeakerChange,
+    isActive,
+    onPlayClick,
 }: {
     id: string;
     timestamp: number;
@@ -78,17 +189,35 @@ const TranscriptSegment = memo(function TranscriptSegment({
     confidence?: number;
     isStreaming: boolean;
     showConfidence: boolean;
+    speaker?: string;
+    onSpeakerChange?: (segmentId: string, newSpeaker: string | null) => void;
+    isActive?: boolean;
+    onPlayClick?: (time: number) => void;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
+    const speakerLabel = speaker === 'mic' ? 'You' : speaker === 'system' ? 'Other' : speaker;
 
     return (
-        <div id={`segment-${id}`} className="mb-3">
+        <div
+            id={`segment-${id}`}
+            className={`mb-3 ${isActive ? 'border-l-2 border-blue-500 bg-blue-50/50 pl-1 -ml-1' : ''}`}
+        >
             <div className="flex items-start gap-2">
                 <Tooltip>
                     <TooltipTrigger>
-                        <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
-                            {formatRecordingTime(timestamp)}
-                        </span>
+                        {onPlayClick ? (
+                            <button
+                                onClick={() => onPlayClick(timestamp)}
+                                className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px] hover:text-blue-600 group flex items-center gap-0.5"
+                            >
+                                <Play className="w-3 h-3 hidden group-hover:inline-block" />
+                                <span className="group-hover:text-blue-600">{formatRecordingTime(timestamp)}</span>
+                            </button>
+                        ) : (
+                            <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
+                                {formatRecordingTime(timestamp)}
+                            </span>
+                        )}
                     </TooltipTrigger>
                     <TooltipContent>
                         {confidence !== undefined && showConfidence && (
@@ -96,6 +225,15 @@ const TranscriptSegment = memo(function TranscriptSegment({
                         )}
                     </TooltipContent>
                 </Tooltip>
+                {onSpeakerChange ? (
+                    <SpeakerPopover
+                        speaker={speaker}
+                        speakerLabel={speakerLabel || undefined}
+                        onSelect={(value) => onSpeakerChange(id, value)}
+                    />
+                ) : speaker && speakerLabel ? (
+                    <SpeakerBadge name={speakerLabel} speakerKey={speaker} />
+                ) : null}
                 <div className="flex-1">
                     {isStreaming ? (
                         <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
@@ -124,7 +262,20 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     totalCount = 0,
     loadedCount = 0,
     onLoadMore,
+    onSpeakerChange,
+    currentPlaybackTime,
+    isAudioPlaying,
+    onPlaySegment,
 }) => {
+    // Active segment detection
+    const activeSegmentId = useMemo(() => {
+        if (!currentPlaybackTime || !isAudioPlaying) return null;
+        for (let i = segments.length - 1; i >= 0; i--) {
+            if (segments[i].timestamp <= currentPlaybackTime) return segments[i].id;
+        }
+        return null;
+    }, [segments, currentPlaybackTime, isAudioPlaying]);
+
     // Create scroll ref first - shared between virtualizer and auto-scroll hook
     const scrollRef = useRef<HTMLDivElement>(null);
     // Ref for infinite scroll trigger element
@@ -296,6 +447,10 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker={segment.speaker}
+                                        onSpeakerChange={onSpeakerChange}
+                                        isActive={activeSegmentId === segment.id}
+                                        onPlayClick={onPlaySegment}
                                     />
                                 </div>
                             );
@@ -352,6 +507,10 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        speaker={segment.speaker}
+                                        onSpeakerChange={onSpeakerChange}
+                                        isActive={activeSegmentId === segment.id}
+                                        onPlayClick={onPlaySegment}
                                     />
                                 </motion.div>
                             );

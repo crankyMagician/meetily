@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Summary, SummaryResponse } from '@/types';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
@@ -13,6 +13,7 @@ import { ChatPanel } from '@/components/MeetingDetails/ChatPanel';
 import { MeetingContextSelector } from '@/components/MeetingContextSelector';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
 
 // Custom hooks
 import { useMeetingData } from '@/hooks/meeting-details/useMeetingData';
@@ -37,6 +38,8 @@ export default function PageContent({
   totalCount,
   loadedCount,
   onLoadMore,
+  updateSegmentSpeaker,
+  audioPath,
 }: {
   meeting: any;
   summaryData: Summary | null;
@@ -50,6 +53,9 @@ export default function PageContent({
   totalCount?: number;
   loadedCount?: number;
   onLoadMore?: () => void;
+  updateSegmentSpeaker?: (transcriptId: string, speaker: string | null) => void;
+  meetingId?: string;
+  audioPath?: string | null;
 }) {
   console.log('📄 PAGE CONTENT: Initializing with data:', {
     meetingId: meeting.id,
@@ -66,6 +72,57 @@ export default function PageContent({
   // Meeting context state
   const [contextType, setContextType] = useState<string | null>(null);
   const [contextNotes, setContextNotes] = useState<string | null>(null);
+
+  // Audio player
+  const audio = useAudioPlayer(audioPath ?? null);
+
+  // Review mode state
+  const [isReviewMode, setIsReviewMode] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const reviewEndTimeRef = useRef<number | null>(null);
+
+  const unassignedSegments = useMemo(() =>
+    (segments ?? []).filter((s: any) => !s.speaker), [segments]);
+
+  const handlePlayFromTime = useCallback((time: number) => {
+    audio.seek(time);
+    audio.play();
+  }, [audio]);
+
+  // Review mode: auto-pause at segment end
+  useEffect(() => {
+    if (!isReviewMode || !audio.isPlaying || reviewEndTimeRef.current === null) return;
+    if (audio.currentTime >= reviewEndTimeRef.current) {
+      audio.pause();
+    }
+  }, [isReviewMode, audio.isPlaying, audio.currentTime]);
+
+  const playReviewSegment = useCallback((index: number) => {
+    if (index >= unassignedSegments.length) {
+      setIsReviewMode(false);
+      setReviewIndex(0);
+      reviewEndTimeRef.current = null;
+      toast.success('All segments reviewed');
+      return;
+    }
+    const seg = unassignedSegments[index];
+    reviewEndTimeRef.current = seg.endTime ?? (seg.timestamp + 10);
+    handlePlayFromTime(seg.timestamp);
+  }, [unassignedSegments, handlePlayFromTime]);
+
+  const handleStartReview = useCallback(() => {
+    if (unassignedSegments.length === 0) return;
+    setIsReviewMode(true);
+    setReviewIndex(0);
+    playReviewSegment(0);
+  }, [unassignedSegments, playReviewSegment]);
+
+  const handleStopReview = useCallback(() => {
+    setIsReviewMode(false);
+    setReviewIndex(0);
+    reviewEndTimeRef.current = null;
+    audio.pause();
+  }, [audio]);
 
   // Ref to store the modal open function from SummaryGeneratorButtonGroup
   const openModelSettingsRef = useRef<(() => void) | null>(null);
@@ -155,6 +212,66 @@ export default function PageContent({
     modelConfig,
   });
 
+  // Refresh chat messages when switching back to chat tab
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      chat.refreshMessages();
+    }
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Speaker change handler (cycles speaker on click)
+  const handleSpeakerChange = useCallback(async (segmentId: string, newSpeaker: string | null) => {
+    // Optimistic update
+    updateSegmentSpeaker?.(segmentId, newSpeaker);
+
+    try {
+      await invoke('api_update_transcript_speaker', {
+        transcriptId: segmentId,
+        speaker: newSpeaker,
+      });
+    } catch (error) {
+      console.error('Failed to update speaker:', error);
+      toast.error('Failed to update speaker');
+    }
+  }, [updateSegmentSpeaker]);
+
+  // Review mode: assign speaker and advance
+  const handleReviewAssign = useCallback((speaker: string) => {
+    const seg = unassignedSegments[reviewIndex];
+    if (seg) {
+      handleSpeakerChange(seg.id, speaker);
+    }
+    const nextIndex = reviewIndex + 1;
+    setReviewIndex(nextIndex);
+    playReviewSegment(nextIndex);
+  }, [unassignedSegments, reviewIndex, playReviewSegment, handleSpeakerChange]);
+
+  const handleReviewSkip = useCallback(() => {
+    const nextIndex = reviewIndex + 1;
+    setReviewIndex(nextIndex);
+    playReviewSegment(nextIndex);
+  }, [reviewIndex, playReviewSegment]);
+
+  // Bulk assign all unassigned speakers
+  const handleBulkAssignSpeaker = useCallback(async (speaker: string) => {
+    try {
+      const count = await invoke<number>('api_set_unassigned_speakers', {
+        meetingId: meeting.id,
+        speaker,
+      });
+      // Update local state for all unassigned segments
+      segments?.forEach(s => {
+        if (!s.speaker) {
+          updateSegmentSpeaker?.(s.id, speaker);
+        }
+      });
+      toast.success(`Assigned ${count} segments as ${speaker === 'mic' ? 'You' : 'Other'}`);
+    } catch (error) {
+      console.error('Failed to bulk assign speakers:', error);
+      toast.error('Failed to assign speakers');
+    }
+  }, [meeting.id, segments, updateSegmentSpeaker]);
+
   // Load meeting context on mount
   useEffect(() => {
     const loadContext = async () => {
@@ -225,6 +342,23 @@ export default function PageContent({
           totalCount={totalCount}
           loadedCount={loadedCount}
           onLoadMore={onLoadMore}
+          onSpeakerChange={handleSpeakerChange}
+          onBulkAssignSpeaker={handleBulkAssignSpeaker}
+          // Audio playback props
+          audioIsPlaying={audio.isPlaying}
+          audioCurrentTime={audio.currentTime}
+          audioDuration={audio.duration}
+          audioError={audio.error}
+          onAudioPlay={audio.play}
+          onAudioPause={audio.pause}
+          onAudioSeek={audio.seek}
+          onPlaySegment={handlePlayFromTime}
+          // Review mode props
+          isReviewMode={isReviewMode}
+          onStartReview={handleStartReview}
+          onStopReview={handleStopReview}
+          onReviewAssignSpeaker={handleReviewAssign}
+          onReviewSkipSegment={handleReviewSkip}
         />
         <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
           {/* Context selector + Tabs header */}

@@ -30,17 +30,27 @@ impl ChatService {
             .await
             .map_err(|e| format!("Failed to save user message: {}", e))?;
 
+        // Parse provider early so we can determine context limits
+        let provider = LLMProvider::from_str(model_provider)?;
+
         // Get session to determine context
         let session = ChatRepository::get_session(pool, session_id)
             .await
             .map_err(|e| format!("Failed to get session: {}", e))?
             .ok_or_else(|| "Session not found".to_string())?;
 
+        // Determine max context chars based on provider to prevent overflow
+        // BuiltInAI has ~32K token context (~80K chars), cloud providers have 128K+ (~300K chars)
+        let max_context_chars = match provider {
+            LLMProvider::BuiltInAI => Some(80_000),
+            _ => Some(300_000),
+        };
+
         // Build context based on whether this is single or cross-meeting
         let system_prompt = if let Some(meeting_id) = &session.meeting_id {
-            build_single_meeting_context(pool, meeting_id).await?
+            build_single_meeting_context(pool, meeting_id, max_context_chars).await?
         } else {
-            build_cross_meeting_context(pool, user_message).await?
+            build_cross_meeting_context(pool, user_message, max_context_chars).await?
         };
 
         // Get chat history for context
@@ -71,9 +81,6 @@ impl ChatService {
         }
 
         user_prompt.push_str(&format!("User: {}", user_message));
-
-        // Parse provider
-        let provider = LLMProvider::from_str(model_provider)?;
 
         // Get API key
         let api_key = if provider == LLMProvider::Ollama

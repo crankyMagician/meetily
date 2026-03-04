@@ -14,6 +14,13 @@ pub struct GradeResponse {
     pub error: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GradingOptions {
+    pub grade_target: Option<String>,  // "me", "other", "both"
+    pub focus_areas: Option<String>,
+    pub user_role: Option<String>,
+}
+
 #[tauri::command]
 pub async fn api_generate_grade<R: Runtime>(
     app: AppHandle<R>,
@@ -21,10 +28,11 @@ pub async fn api_generate_grade<R: Runtime>(
     meeting_id: String,
     model: String,
     model_name: String,
+    grading_options: Option<GradingOptions>,
 ) -> Result<GradeResponse, String> {
     info!(
-        "api_generate_grade called for meeting: {}, model: {}/{}",
-        meeting_id, model, model_name
+        "api_generate_grade called for meeting: {}, model: {}/{}, options: {:?}",
+        meeting_id, model, model_name, grading_options
     );
 
     let pool = state.db_manager.pool().clone();
@@ -44,6 +52,7 @@ pub async fn api_generate_grade<R: Runtime>(
             meeting_id_clone,
             model,
             model_name,
+            grading_options,
         )
         .await;
     });

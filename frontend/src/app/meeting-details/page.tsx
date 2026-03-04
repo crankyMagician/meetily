@@ -44,6 +44,7 @@ function MeetingDetailsContent() {
     loadedCount,
     loadMore,
     error: transcriptError,
+    updateSegmentSpeaker,
   } = usePaginatedTranscripts({ meetingId: meetingId || '' });
 
   // Check if gemma3:1b model is available in Ollama
@@ -355,6 +356,8 @@ function MeetingDetailsContent() {
     </div>;
   }
 
+  const audioPath = metadata?.folder_path ? `${metadata.folder_path}/audio.mp4` : null;
+
   return <PageContent
     meeting={meetingDetails}
     summaryData={meetingSummary}
@@ -373,6 +376,9 @@ function MeetingDetailsContent() {
     totalCount={totalCount}
     loadedCount={loadedCount}
     onLoadMore={loadMore}
+    updateSegmentSpeaker={updateSegmentSpeaker}
+    meetingId={meetingId || ''}
+    audioPath={audioPath}
   />;
 }
 

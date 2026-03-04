@@ -310,6 +310,39 @@ impl SettingsRepository {
         }
     }
 
+    // ===== USER DISPLAY NAME METHODS =====
+
+    /// Gets the user's display name from the settings table
+    pub async fn get_user_display_name(
+        pool: &SqlitePool,
+    ) -> std::result::Result<Option<String>, sqlx::Error> {
+        let name: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT userDisplayName FROM settings WHERE id = '1' LIMIT 1",
+        )
+        .fetch_optional(pool)
+        .await?;
+        Ok(name.flatten())
+    }
+
+    /// Sets the user's display name in the settings table
+    pub async fn set_user_display_name(
+        pool: &SqlitePool,
+        name: &str,
+    ) -> std::result::Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            INSERT INTO settings (id, provider, model, whisperModel, userDisplayName)
+            VALUES ('1', 'openai', 'gpt-4o-2024-11-20', 'large-v3', $1)
+            ON CONFLICT(id) DO UPDATE SET
+                userDisplayName = $1
+            "#,
+        )
+        .bind(name)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
     /// Saves the custom OpenAI configuration as JSON
     ///
     /// # Arguments

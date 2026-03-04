@@ -109,6 +109,23 @@ export function useChat({ meetingId, modelConfig }: UseChatProps) {
     }
   }, [sessionId, meetingId, modelConfig, isSending]);
 
+  // Reload messages from DB (useful when returning to chat tab after LLM response)
+  const refreshMessages = useCallback(async () => {
+    if (!sessionId) return;
+    try {
+      const history = await invoke<ChatMessageResponse[]>('api_get_chat_history', {
+        sessionId,
+      });
+      setMessages(history);
+      // If we were waiting for a response and it arrived, clear sending state
+      if (isSending) {
+        setIsSending(false);
+      }
+    } catch (error) {
+      console.error('Failed to refresh chat messages:', error);
+    }
+  }, [sessionId, isSending]);
+
   const clearChat = useCallback(() => {
     setSessionId(null);
     setMessages([]);
@@ -120,5 +137,6 @@ export function useChat({ meetingId, modelConfig }: UseChatProps) {
     isSending,
     sendMessage,
     clearChat,
+    refreshMessages,
   };
 }

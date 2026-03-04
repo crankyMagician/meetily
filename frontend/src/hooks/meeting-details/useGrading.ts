@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { GradeResponse, GradeResult } from '@/types';
+import { GradeResponse, GradeResult, GradingOptions } from '@/types';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { toast } from 'sonner';
 
@@ -81,7 +81,7 @@ export function useGrading({ meetingId, modelConfig }: UseGradingProps) {
     }, 2000);
   }, [meetingId, stopPolling]);
 
-  const generateGrade = useCallback(async () => {
+  const generateGrade = useCallback(async (options?: GradingOptions) => {
     setGradeStatus('pending');
     setGradeError(null);
 
@@ -95,6 +95,7 @@ export function useGrading({ meetingId, modelConfig }: UseGradingProps) {
         meetingId,
         model: modelConfig.provider,
         modelName: modelConfig.model,
+        gradingOptions: options || null,
       });
 
       setGradeId(response.id);

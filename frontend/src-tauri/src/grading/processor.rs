@@ -1,9 +1,34 @@
 /// Builds the system prompt for communication grading based on meeting context.
-pub fn build_grading_prompt(context_type: Option<&str>, context_notes: Option<&str>) -> String {
+///
+/// # Arguments
+/// * `context_type` - Meeting type (e.g., "Sales Call", "Interview")
+/// * `context_notes` - Additional context notes
+/// * `grade_target` - Who to grade (e.g., "Sam", "the participant")
+/// * `focus_areas` - Specific areas to focus on (e.g., "pricing objection handling")
+/// * `user_role` - User's role in the meeting (e.g., "Sales rep", "Interviewer")
+pub fn build_grading_prompt(
+    context_type: Option<&str>,
+    context_notes: Option<&str>,
+    grade_target: Option<&str>,
+    focus_areas: Option<&str>,
+    user_role: Option<&str>,
+) -> String {
     let ctx = context_type.unwrap_or("General");
+    let target = grade_target.unwrap_or("the participant");
+
     let notes_section = context_notes
         .filter(|n| !n.is_empty())
         .map(|n| format!("\nAdditional Context: {}", n))
+        .unwrap_or_default();
+
+    let role_section = user_role
+        .filter(|r| !r.is_empty())
+        .map(|r| format!("\n{} is the {}.", target, r))
+        .unwrap_or_default();
+
+    let focus_section = focus_areas
+        .filter(|f| !f.is_empty())
+        .map(|f| format!("\n\n## Focus Areas\nPay special attention to: {}", f))
         .unwrap_or_default();
 
     let context_criteria = match ctx.to_lowercase().as_str() {
@@ -52,16 +77,18 @@ pub fn build_grading_prompt(context_type: Option<&str>, context_notes: Option<&s
     };
 
     format!(
-        r#"You are an expert communication coach. Analyze the following meeting transcript and grade the participant's communication skills.
+        r#"You are an expert communication coach. Analyze the following meeting transcript and grade {target}'s communication skills.{role_section}
 
 Meeting Type: {ctx}{notes_section}
-
+{focus_section}
 ## Universal Criteria (always evaluate):
 - Speaking Clarity (1-10): Clear ideas, minimal filler words, structured thoughts
 - Conciseness (1-10): Gets to the point, avoids repetition
 - Active Listening (1-10): Acknowledges others, builds on their points
 - Overall Effectiveness (1-10): How well communication served the meeting's purpose
 {context_criteria}
+
+Transcript segments are labeled with speaker names. Focus your grading on {target}'s contributions only.
 
 Return ONLY valid JSON in this exact format (no markdown fencing):
 {{
