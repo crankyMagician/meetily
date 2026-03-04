@@ -108,3 +108,63 @@ export interface TranscriptSegmentData {
   text: string;
   confidence?: number;
 }
+
+// Meeting context types
+export type MeetingContextType =
+  | 'Sales Call'
+  | 'Interview'
+  | 'Team Standup'
+  | '1-on-1'
+  | 'Personal'
+  | 'Brainstorm'
+  | 'Presentation'
+  | 'Custom';
+
+export interface MeetingContext {
+  context_type: string | null;
+  context_notes: string | null;
+}
+
+// Communication grading types
+export interface GradeCategory {
+  name: string;
+  score: number;
+  feedback: string;
+}
+
+export interface GradeResult {
+  overall_score: number;
+  categories: GradeCategory[];
+  strengths: string[];
+  areas_for_improvement: string[];
+  actionable_tips: string[];
+}
+
+export interface GradeResponse {
+  id: string;
+  status: 'idle' | 'pending' | 'completed' | 'failed';
+  meeting_id: string;
+  result: GradeResult | null;
+  error: string | null;
+}
+
+// Chat types
+export interface ChatSessionResponse {
+  id: string;
+  meeting_id: string | null;
+  title: string | null;
+  created_at: string;
+}
+
+export interface ChatMessageResponse {
+  id: string;
+  session_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
+export interface SendMessageResponse {
+  message: ChatMessageResponse;
+  response: string;
+}

@@ -1382,3 +1382,51 @@ pub async fn api_test_custom_openai_connection<R: Runtime>(
         }
     }
 }
+
+// ========== Meeting Context Commands ==========
+
+#[tauri::command]
+pub async fn api_save_meeting_context<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    context_type: Option<String>,
+    context_notes: Option<String>,
+) -> Result<serde_json::Value, String> {
+    log_info!(
+        "api_save_meeting_context called for meeting: {}, type: {:?}",
+        meeting_id,
+        context_type
+    );
+    let pool = state.db_manager.pool();
+
+    MeetingsRepository::save_meeting_context(
+        pool,
+        &meeting_id,
+        context_type.as_deref(),
+        context_notes.as_deref(),
+    )
+    .await
+    .map_err(|e| format!("Failed to save meeting context: {}", e))?;
+
+    Ok(serde_json::json!({ "message": "Meeting context saved" }))
+}
+
+#[tauri::command]
+pub async fn api_get_meeting_context<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<serde_json::Value, String> {
+    let pool = state.db_manager.pool();
+
+    let (context_type, context_notes) =
+        MeetingsRepository::get_meeting_context(pool, &meeting_id)
+            .await
+            .map_err(|e| format!("Failed to get meeting context: {}", e))?;
+
+    Ok(serde_json::json!({
+        "context_type": context_type,
+        "context_notes": context_notes,
+    }))
+}

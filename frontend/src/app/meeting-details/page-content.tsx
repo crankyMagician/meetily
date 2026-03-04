@@ -8,7 +8,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { TranscriptPanel } from '@/components/MeetingDetails/TranscriptPanel';
 import { SummaryPanel } from '@/components/MeetingDetails/SummaryPanel';
+import { GradePanel } from '@/components/MeetingDetails/GradePanel';
+import { ChatPanel } from '@/components/MeetingDetails/ChatPanel';
+import { MeetingContextSelector } from '@/components/MeetingContextSelector';
 import { ModelConfig } from '@/components/ModelSettingsModal';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // Custom hooks
 import { useMeetingData } from '@/hooks/meeting-details/useMeetingData';
@@ -16,6 +20,8 @@ import { useSummaryGeneration } from '@/hooks/meeting-details/useSummaryGenerati
 import { useTemplates } from '@/hooks/meeting-details/useTemplates';
 import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
+import { useGrading } from '@/hooks/meeting-details/useGrading';
+import { useChat } from '@/hooks/meeting-details/useChat';
 import { useConfig } from '@/contexts/ConfigContext';
 
 export default function PageContent({
@@ -55,6 +61,11 @@ export default function PageContent({
   const [customPrompt, setCustomPrompt] = useState<string>('');
   const [isRecording] = useState(false);
   const [summaryResponse] = useState<SummaryResponse | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('summary');
+
+  // Meeting context state
+  const [contextType, setContextType] = useState<string | null>(null);
+  const [contextNotes, setContextNotes] = useState<string | null>(null);
 
   // Ref to store the modal open function from SummaryGeneratorButtonGroup
   const openModelSettingsRef = useRef<(() => void) | null>(null);
@@ -132,6 +143,35 @@ export default function PageContent({
     meeting,
   });
 
+  // Grading hook
+  const grading = useGrading({
+    meetingId: meeting.id,
+    modelConfig,
+  });
+
+  // Chat hook
+  const chat = useChat({
+    meetingId: meeting.id,
+    modelConfig,
+  });
+
+  // Load meeting context on mount
+  useEffect(() => {
+    const loadContext = async () => {
+      try {
+        const ctx = await invoke<{ context_type: string | null; context_notes: string | null }>(
+          'api_get_meeting_context',
+          { meetingId: meeting.id }
+        );
+        setContextType(ctx.context_type);
+        setContextNotes(ctx.context_notes);
+      } catch (error) {
+        console.error('Failed to load meeting context:', error);
+      }
+    };
+    loadContext();
+  }, [meeting.id]);
+
   // Track page view
   useEffect(() => {
     Analytics.trackPageView('meeting_details');
@@ -186,41 +226,88 @@ export default function PageContent({
           loadedCount={loadedCount}
           onLoadMore={onLoadMore}
         />
-        <SummaryPanel
-          meeting={meeting}
-          meetingTitle={meetingData.meetingTitle}
-          onTitleChange={meetingData.handleTitleChange}
-          isEditingTitle={meetingData.isEditingTitle}
-          onStartEditTitle={() => meetingData.setIsEditingTitle(true)}
-          onFinishEditTitle={() => meetingData.setIsEditingTitle(false)}
-          isTitleDirty={meetingData.isTitleDirty}
-          summaryRef={meetingData.blockNoteSummaryRef}
-          isSaving={meetingData.isSaving}
-          onSaveAll={meetingData.saveAllChanges}
-          onCopySummary={copyOperations.handleCopySummary}
-          onOpenFolder={meetingOperations.handleOpenMeetingFolder}
-          aiSummary={meetingData.aiSummary}
-          summaryStatus={summaryGeneration.summaryStatus}
-          transcripts={meetingData.transcripts}
-          modelConfig={modelConfig}
-          setModelConfig={setModelConfig}
-          onSaveModelConfig={handleSaveModelConfig}
-          onGenerateSummary={summaryGeneration.handleGenerateSummary}
-          onStopGeneration={summaryGeneration.handleStopGeneration}
-          customPrompt={customPrompt}
-          summaryResponse={summaryResponse}
-          onSaveSummary={meetingData.handleSaveSummary}
-          onSummaryChange={meetingData.handleSummaryChange}
-          onDirtyChange={meetingData.setIsSummaryDirty}
-          summaryError={summaryGeneration.summaryError}
-          onRegenerateSummary={summaryGeneration.handleRegenerateSummary}
-          getSummaryStatusMessage={summaryGeneration.getSummaryStatusMessage}
-          availableTemplates={templates.availableTemplates}
-          selectedTemplate={templates.selectedTemplate}
-          onTemplateSelect={templates.handleTemplateSelection}
-          isModelConfigLoading={false}
-          onOpenModelSettings={handleRegisterModalOpen}
-        />
+        <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+          {/* Context selector + Tabs header */}
+          <div className="px-4 pt-3 pb-0 border-b border-gray-200 space-y-2">
+            <div className="flex items-center justify-between">
+              <MeetingContextSelector
+                meetingId={meeting.id}
+                initialContextType={contextType}
+                initialContextNotes={contextNotes}
+                compact={true}
+                onChange={(type, notes) => {
+                  setContextType(type);
+                  setContextNotes(notes);
+                }}
+              />
+            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="summary">Summary</TabsTrigger>
+                <TabsTrigger value="grade">Grade</TabsTrigger>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Tab content */}
+          <div className="flex-1 overflow-hidden">
+            {activeTab === 'summary' && (
+              <SummaryPanel
+                meeting={meeting}
+                meetingTitle={meetingData.meetingTitle}
+                onTitleChange={meetingData.handleTitleChange}
+                isEditingTitle={meetingData.isEditingTitle}
+                onStartEditTitle={() => meetingData.setIsEditingTitle(true)}
+                onFinishEditTitle={() => meetingData.setIsEditingTitle(false)}
+                isTitleDirty={meetingData.isTitleDirty}
+                summaryRef={meetingData.blockNoteSummaryRef}
+                isSaving={meetingData.isSaving}
+                onSaveAll={meetingData.saveAllChanges}
+                onCopySummary={copyOperations.handleCopySummary}
+                onOpenFolder={meetingOperations.handleOpenMeetingFolder}
+                aiSummary={meetingData.aiSummary}
+                summaryStatus={summaryGeneration.summaryStatus}
+                transcripts={meetingData.transcripts}
+                modelConfig={modelConfig}
+                setModelConfig={setModelConfig}
+                onSaveModelConfig={handleSaveModelConfig}
+                onGenerateSummary={summaryGeneration.handleGenerateSummary}
+                onStopGeneration={summaryGeneration.handleStopGeneration}
+                customPrompt={customPrompt}
+                summaryResponse={summaryResponse}
+                onSaveSummary={meetingData.handleSaveSummary}
+                onSummaryChange={meetingData.handleSummaryChange}
+                onDirtyChange={meetingData.setIsSummaryDirty}
+                summaryError={summaryGeneration.summaryError}
+                onRegenerateSummary={summaryGeneration.handleRegenerateSummary}
+                getSummaryStatusMessage={summaryGeneration.getSummaryStatusMessage}
+                availableTemplates={templates.availableTemplates}
+                selectedTemplate={templates.selectedTemplate}
+                onTemplateSelect={templates.handleTemplateSelection}
+                isModelConfigLoading={false}
+                onOpenModelSettings={handleRegisterModalOpen}
+              />
+            )}
+            {activeTab === 'grade' && (
+              <GradePanel
+                status={grading.gradeStatus}
+                result={grading.gradeResult}
+                error={grading.gradeError}
+                onGenerate={grading.generateGrade}
+              />
+            )}
+            {activeTab === 'chat' && (
+              <ChatPanel
+                messages={chat.messages}
+                isLoading={chat.isLoading}
+                isSending={chat.isSending}
+                onSendMessage={chat.sendMessage}
+                meetingId={meeting.id}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </motion.div>
   );

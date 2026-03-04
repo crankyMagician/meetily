@@ -62,7 +62,7 @@ impl MeetingsRepository {
 
         // Get meeting details
         let meeting: Option<MeetingModel> =
-            sqlx::query_as("SELECT id, title, created_at, updated_at, folder_path FROM meetings WHERE id = ?")
+            sqlx::query_as("SELECT id, title, created_at, updated_at, folder_path, context_type, context_notes FROM meetings WHERE id = ?")
                 .bind(meeting_id)
                 .fetch_optional(&mut *transaction)
                 .await?;
@@ -120,7 +120,7 @@ impl MeetingsRepository {
         }
 
         let meeting: Option<MeetingModel> =
-            sqlx::query_as("SELECT id, title, created_at, updated_at, folder_path FROM meetings WHERE id = ?")
+            sqlx::query_as("SELECT id, title, created_at, updated_at, folder_path, context_type, context_notes FROM meetings WHERE id = ?")
                 .bind(meeting_id)
                 .fetch_optional(pool)
                 .await?;
@@ -196,6 +196,38 @@ impl MeetingsRepository {
         Ok(true)
     }
 
+    pub async fn save_meeting_context(
+        pool: &SqlitePool,
+        meeting_id: &str,
+        context_type: Option<&str>,
+        context_notes: Option<&str>,
+    ) -> Result<bool, SqlxError> {
+        let now = Utc::now().naive_utc();
+        let rows = sqlx::query(
+            "UPDATE meetings SET context_type = ?, context_notes = ?, updated_at = ? WHERE id = ?",
+        )
+        .bind(context_type)
+        .bind(context_notes)
+        .bind(now)
+        .bind(meeting_id)
+        .execute(pool)
+        .await?;
+        Ok(rows.rows_affected() > 0)
+    }
+
+    pub async fn get_meeting_context(
+        pool: &SqlitePool,
+        meeting_id: &str,
+    ) -> Result<(Option<String>, Option<String>), SqlxError> {
+        let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT context_type, context_notes FROM meetings WHERE id = ?",
+        )
+        .bind(meeting_id)
+        .fetch_optional(pool)
+        .await?;
+        Ok(row.unwrap_or((None, None)))
+    }
+
     pub async fn update_meeting_name(
         pool: &SqlitePool,
         meeting_id: &str,
@@ -246,25 +278,43 @@ async fn delete_meeting_with_transaction(
     }
 
     // Delete from related tables in proper order
-    // 1. Delete from transcript_chunks
+    // 1. Delete chat messages for sessions belonging to this meeting
+    sqlx::query("DELETE FROM chat_messages WHERE session_id IN (SELECT id FROM chat_sessions WHERE meeting_id = ?)")
+        .bind(meeting_id)
+        .execute(&mut *transaction)
+        .await?;
+
+    // 2. Delete chat sessions
+    sqlx::query("DELETE FROM chat_sessions WHERE meeting_id = ?")
+        .bind(meeting_id)
+        .execute(&mut *transaction)
+        .await?;
+
+    // 3. Delete communication grades
+    sqlx::query("DELETE FROM communication_grades WHERE meeting_id = ?")
+        .bind(meeting_id)
+        .execute(&mut *transaction)
+        .await?;
+
+    // 4. Delete from transcript_chunks
     sqlx::query("DELETE FROM transcript_chunks WHERE meeting_id = ?")
         .bind(meeting_id)
         .execute(&mut *transaction)
         .await?;
 
-    // 2. Delete from summary_processes
+    // 5. Delete from summary_processes
     sqlx::query("DELETE FROM summary_processes WHERE meeting_id = ?")
         .bind(meeting_id)
         .execute(&mut *transaction)
         .await?;
 
-    // 3. Delete from transcripts
+    // 6. Delete from transcripts
     sqlx::query("DELETE FROM transcripts WHERE meeting_id = ?")
         .bind(meeting_id)
         .execute(&mut *transaction)
         .await?;
 
-    // 4. Finally, delete the meeting
+    // 7. Finally, delete the meeting
     let result = sqlx::query("DELETE FROM meetings WHERE id = ?")
         .bind(meeting_id)
         .execute(&mut *transaction)

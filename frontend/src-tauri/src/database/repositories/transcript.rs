@@ -82,6 +82,19 @@ impl TranscriptsRepository {
         Ok(meeting_id)
     }
 
+    /// Gets all transcripts for a meeting, ordered by audio_start_time.
+    pub async fn get_all_for_meeting(
+        pool: &SqlitePool,
+        meeting_id: &str,
+    ) -> Result<Vec<crate::database::models::Transcript>, SqlxError> {
+        sqlx::query_as::<_, crate::database::models::Transcript>(
+            "SELECT * FROM transcripts WHERE meeting_id = ? ORDER BY audio_start_time ASC",
+        )
+        .bind(meeting_id)
+        .fetch_all(pool)
+        .await
+    }
+
     /// Searches for a query string within the transcripts.
     /// It returns a list of matching transcripts with context.
     pub async fn search_transcripts(

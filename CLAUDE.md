@@ -433,7 +433,7 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
   - `main`: Stable releases
   - `fix/*`: Bug fixes
   - `enhance/*`: Feature enhancements
-  - Current: `fix/audio-mixing` (working on audio pipeline improvements)
+  - Current: `enhance/meeting-context-grading-chat` (meeting context, communication grading, and chat features)
 
 ## Key Files Reference
 
@@ -453,3 +453,29 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 
 **Whisper Integration**:
 - [frontend/src-tauri/src/whisper_engine/whisper_engine.rs](frontend/src-tauri/src/whisper_engine/whisper_engine.rs) - Whisper model management and transcription
+
+**Communication Grading** (new):
+- [frontend/src-tauri/src/grading/](frontend/src-tauri/src/grading/) - Grading backend module
+  - `commands.rs` - `api_generate_grade`, `api_get_grade` Tauri commands
+  - `service.rs` - Background grade generation (follows summary service pattern)
+  - `processor.rs` - Context-aware grading prompt construction
+- [frontend/src/components/MeetingDetails/GradePanel.tsx](frontend/src/components/MeetingDetails/GradePanel.tsx) - Grade display UI
+- [frontend/src/hooks/meeting-details/useGrading.ts](frontend/src/hooks/meeting-details/useGrading.ts) - Grade generation hook
+
+**Meeting Chat** (new):
+- [frontend/src-tauri/src/chat/](frontend/src-tauri/src/chat/) - Chat backend module
+  - `commands.rs` - `api_create_chat_session`, `api_send_chat_message`, `api_get_chat_history`, `api_list_chat_sessions`
+  - `service.rs` - Message handling, LLM calls with conversation history
+  - `context_builder.rs` - Builds LLM context from single meeting or cross-meeting search
+- [frontend/src/components/MeetingDetails/ChatPanel.tsx](frontend/src/components/MeetingDetails/ChatPanel.tsx) - Chat UI
+- [frontend/src/hooks/meeting-details/useChat.ts](frontend/src/hooks/meeting-details/useChat.ts) - Chat session hook
+
+**Meeting Context** (new):
+- [frontend/src/components/MeetingContextSelector.tsx](frontend/src/components/MeetingContextSelector.tsx) - Meeting type selector
+- Meeting context fields (`context_type`, `context_notes`) stored on `meetings` table
+- Context commands: `api_save_meeting_context`, `api_get_meeting_context` in `api/api.rs`
+
+### Known Issues (Grading & Chat)
+
+1. **Grading evaluates the whole conversation** — Currently grades all speakers as one. Needs per-speaker analysis once speaker diarization labels are available in transcripts.
+2. **Chat with BuiltInAI fails** — "Failed to add token to batch" error when using local BuiltInAI models. The full transcript context can exceed the model's context window. Workaround: use a cloud provider (OpenAI, Claude, Groq) or Ollama with a model that has a larger context window. Fix needed: truncate/summarize context to fit model limits in `chat/context_builder.rs`.

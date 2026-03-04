@@ -38,8 +38,10 @@ pub(crate) use perf_trace;
 pub mod analytics;
 pub mod api;
 pub mod audio;
+pub mod chat;
 pub mod console_utils;
 pub mod database;
+pub mod grading;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -639,6 +641,9 @@ pub fn run() {
             api::api_save_custom_openai_config,
             api::api_get_custom_openai_config,
             api::api_test_custom_openai_connection,
+            // Meeting context commands
+            api::api_save_meeting_context,
+            api::api_get_meeting_context,
             // Summary commands
             summary::api_process_transcript,
             summary::api_get_summary,
@@ -657,6 +662,14 @@ pub fn run() {
             summary::summary_engine::builtin_ai_is_model_ready,
             summary::summary_engine::builtin_ai_get_available_summary_model,
             summary::summary_engine::builtin_ai_get_recommended_model,
+            // Grading commands
+            grading::api_generate_grade,
+            grading::api_get_grade,
+            // Chat commands
+            chat::api_create_chat_session,
+            chat::api_send_chat_message,
+            chat::api_get_chat_history,
+            chat::api_list_chat_sessions,
             openrouter::get_openrouter_models,
             audio::recording_preferences::get_recording_preferences,
             audio::recording_preferences::set_recording_preferences,
