@@ -1,9 +1,9 @@
 "use client";
 
-import { Transcript, TranscriptSegmentData } from '@/types';
-import { TranscriptView } from '@/components/TranscriptView';
+import { Transcript, TranscriptSegmentData, MeetingSpeaker } from '@/types';
 import { VirtualizedTranscriptView } from '@/components/VirtualizedTranscriptView';
 import { TranscriptButtonGroup } from './TranscriptButtonGroup';
+import { SpeakerManagementPanel } from './SpeakerManagementPanel';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { useMemo } from 'react';
 
@@ -28,6 +28,19 @@ interface TranscriptPanelProps {
   // Speaker assignment
   onSpeakerChange?: (segmentId: string, newSpeaker: string | null) => void;
   onBulkAssignSpeaker?: (speaker: string) => void;
+
+  // Speaker management
+  speakers?: MeetingSpeaker[];
+  speakerSegmentCounts?: Map<string, number>;
+  getSpeakerDisplay?: (key: string | undefined) => { name: string; color: string };
+  onRenameSpeaker?: (key: string, name: string) => Promise<void>;
+  onUpdateSpeakerColor?: (key: string, color: string) => Promise<void>;
+  onAddSpeaker?: (key: string, name: string, color?: string) => Promise<void>;
+  onDeleteSpeaker?: (key: string) => Promise<void>;
+  onReassignSpeaker?: (from: string, to: string) => Promise<number>;
+  onRefreshSpeakers?: () => Promise<void>;
+  onBulkAssignSelected?: (segmentIds: string[], speaker: string) => void;
+  meetingId?: string;
 
   // Audio playback
   audioIsPlaying?: boolean;
@@ -64,6 +77,18 @@ export function TranscriptPanel({
   onLoadMore,
   onSpeakerChange,
   onBulkAssignSpeaker,
+  // Speaker management
+  speakers,
+  speakerSegmentCounts,
+  getSpeakerDisplay,
+  onRenameSpeaker,
+  onUpdateSpeakerColor,
+  onAddSpeaker,
+  onDeleteSpeaker,
+  onReassignSpeaker,
+  onRefreshSpeakers,
+  onBulkAssignSelected,
+  meetingId,
   // Audio
   audioIsPlaying = false,
   audioCurrentTime = 0,
@@ -104,6 +129,8 @@ export function TranscriptPanel({
 
   const showAudioPlayer = !isRecording && convertedSegments.length > 0 && onAudioPlay;
 
+  const hasSpeakerManagement = speakers && onRenameSpeaker && onUpdateSpeakerColor && onAddSpeaker && onDeleteSpeaker && onReassignSpeaker && onRefreshSpeakers && meetingId;
+
   return (
     <div className="hidden md:flex md:w-1/4 lg:w-1/3 min-w-0 border-r border-gray-200 bg-white flex-col relative shrink-0">
       {/* Title area */}
@@ -113,25 +140,46 @@ export function TranscriptPanel({
           onCopyTranscript={onCopyTranscript}
           onOpenMeetingFolder={onOpenMeetingFolder}
         />
-        {onBulkAssignSpeaker && unassignedCount > 0 && (
-          <div className="mt-2 text-xs text-gray-500">
-            {unassignedCount} unassigned —{' '}
-            <button
-              onClick={() => onBulkAssignSpeaker('mic')}
-              className="text-blue-600 hover:underline"
-            >
-              Set as You
-            </button>
-            {' | '}
-            <button
-              onClick={() => onBulkAssignSpeaker('system')}
-              className="text-purple-600 hover:underline"
-            >
-              Set as Other
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* Speaker management panel */}
+      {hasSpeakerManagement && (
+        <div className="px-4 pt-2">
+          <SpeakerManagementPanel
+            speakers={speakers}
+            segmentCounts={speakerSegmentCounts || new Map()}
+            unassignedCount={unassignedCount}
+            onRenameSpeaker={onRenameSpeaker}
+            onUpdateColor={onUpdateSpeakerColor}
+            onAddSpeaker={onAddSpeaker}
+            onDeleteSpeaker={onDeleteSpeaker}
+            onReassignSpeaker={onReassignSpeaker}
+            onRefreshSpeakers={onRefreshSpeakers}
+            meetingId={meetingId}
+            onBulkAssignSpeaker={onBulkAssignSpeaker}
+          />
+        </div>
+      )}
+
+      {/* Legacy bulk assign fallback (when no speaker management) */}
+      {!hasSpeakerManagement && onBulkAssignSpeaker && unassignedCount > 0 && (
+        <div className="px-4 mt-2 text-xs text-gray-500">
+          {unassignedCount} unassigned —{' '}
+          <button
+            onClick={() => onBulkAssignSpeaker('mic')}
+            className="text-blue-600 hover:underline"
+          >
+            Set as You
+          </button>
+          {' | '}
+          <button
+            onClick={() => onBulkAssignSpeaker('system')}
+            className="text-purple-600 hover:underline"
+          >
+            Set as Other
+          </button>
+        </div>
+      )}
 
       {/* Transcript content - use virtualized view for better performance */}
       <div className="flex-1 overflow-hidden">
@@ -153,6 +201,9 @@ export function TranscriptPanel({
           currentPlaybackTime={audioCurrentTime}
           isAudioPlaying={audioIsPlaying}
           onPlaySegment={onPlaySegment}
+          speakers={speakers}
+          getSpeakerDisplay={getSpeakerDisplay}
+          onBulkAssignSelected={onBulkAssignSelected}
         />
       </div>
 
@@ -184,6 +235,7 @@ export function TranscriptPanel({
           onStopReview={onStopReview}
           onAssignSpeaker={onReviewAssignSpeaker}
           onSkipSegment={onReviewSkipSegment}
+          speakers={speakers}
         />
       )}
     </div>

@@ -290,7 +290,13 @@ async fn delete_meeting_with_transaction(
         .execute(&mut *transaction)
         .await?;
 
-    // 3. Delete communication grades
+    // 3. Delete meeting speakers
+    sqlx::query("DELETE FROM meeting_speakers WHERE meeting_id = ?")
+        .bind(meeting_id)
+        .execute(&mut *transaction)
+        .await?;
+
+    // 4. Delete communication grades
     sqlx::query("DELETE FROM communication_grades WHERE meeting_id = ?")
         .bind(meeting_id)
         .execute(&mut *transaction)

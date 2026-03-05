@@ -2,6 +2,8 @@
 
 import { memo } from 'react';
 import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { MeetingSpeaker } from '@/types';
+import { getPaletteForColor } from '@/lib/speaker-colors';
 
 interface AudioPlayerProps {
   isPlaying: boolean;
@@ -18,6 +20,8 @@ interface AudioPlayerProps {
   onStopReview?: () => void;
   onAssignSpeaker?: (speaker: string) => void;
   onSkipSegment?: () => void;
+  // Dynamic speakers
+  speakers?: MeetingSpeaker[];
 }
 
 function formatTime(seconds: number): string {
@@ -40,6 +44,7 @@ export const AudioPlayer = memo(function AudioPlayer({
   onStopReview,
   onAssignSpeaker,
   onSkipSegment,
+  speakers,
 }: AudioPlayerProps) {
   if (error) {
     return (
@@ -61,6 +66,9 @@ export const AudioPlayer = memo(function AudioPlayer({
 
   // Review mode UI
   if (isReviewMode) {
+    // Use dynamic speaker list if available, otherwise fallback to You/Other
+    const speakerButtons = speakers && speakers.length > 0 ? speakers : null;
+
     return (
       <div className="border-t border-gray-200 bg-blue-50 px-3 py-2 space-y-2">
         <div className="flex items-center justify-between">
@@ -83,18 +91,35 @@ export const AudioPlayer = memo(function AudioPlayer({
           </button>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onAssignSpeaker?.('mic')}
-            className="flex-1 py-1.5 px-3 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
-          >
-            You
-          </button>
-          <button
-            onClick={() => onAssignSpeaker?.('system')}
-            className="flex-1 py-1.5 px-3 bg-purple-600 text-white text-sm font-medium rounded hover:bg-purple-700 transition-colors"
-          >
-            Other
-          </button>
+          {speakerButtons ? (
+            speakerButtons.map(s => {
+              const palette = getPaletteForColor(s.color);
+              return (
+                <button
+                  key={s.speaker_key}
+                  onClick={() => onAssignSpeaker?.(s.speaker_key)}
+                  className={`flex-1 py-1.5 px-3 text-sm font-medium rounded transition-colors border ${palette.border} ${palette.bg} ${palette.text} hover:opacity-80`}
+                >
+                  {s.display_name}
+                </button>
+              );
+            })
+          ) : (
+            <>
+              <button
+                onClick={() => onAssignSpeaker?.('mic')}
+                className="flex-1 py-1.5 px-3 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+              >
+                You
+              </button>
+              <button
+                onClick={() => onAssignSpeaker?.('system')}
+                className="flex-1 py-1.5 px-3 bg-purple-600 text-white text-sm font-medium rounded hover:bg-purple-700 transition-colors"
+              >
+                Other
+              </button>
+            </>
+          )}
           <button
             onClick={onSkipSegment}
             className="py-1.5 px-3 text-sm text-gray-500 hover:text-gray-700 hover:underline"

@@ -164,6 +164,32 @@ impl TranscriptsRepository {
         Ok(result.rows_affected())
     }
 
+    /// Batch-update speaker for multiple transcript IDs at once.
+    pub async fn update_speakers_batch(
+        pool: &SqlitePool,
+        transcript_ids: &[String],
+        speaker: &str,
+    ) -> Result<u64, SqlxError> {
+        if transcript_ids.is_empty() {
+            return Ok(0);
+        }
+
+        // Build placeholders for IN clause
+        let placeholders: Vec<&str> = transcript_ids.iter().map(|_| "?").collect();
+        let query_str = format!(
+            "UPDATE transcripts SET speaker = ? WHERE id IN ({})",
+            placeholders.join(", ")
+        );
+
+        let mut query = sqlx::query(&query_str).bind(speaker);
+        for id in transcript_ids {
+            query = query.bind(id);
+        }
+
+        let result = query.execute(pool).await?;
+        Ok(result.rows_affected())
+    }
+
     /// Helper function to extract a snippet of text around the first match of a query.
     fn get_match_context(transcript: &str, query: &str) -> String {
         let transcript_lower = transcript.to_lowercase();
@@ -186,5 +212,94 @@ impl TranscriptsRepository {
             }
             None => transcript.chars().take(200).collect(), // Fallback to the start of the transcript
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::test_helpers::{create_test_pool, seed_meeting, seed_transcript};
+
+    #[tokio::test]
+    async fn update_speakers_batch_updates_all() {
+        let pool = create_test_pool().await;
+        seed_meeting(&pool, "m1", "Test").await;
+        seed_transcript(&pool, "t1", "m1", "Hello", Some("mic")).await;
+        seed_transcript(&pool, "t2", "m1", "Hi", Some("mic")).await;
+        seed_transcript(&pool, "t3", "m1", "Hey", Some("system")).await;
+
+        let ids = vec!["t1".to_string(), "t2".to_string()];
+        let count = TranscriptsRepository::update_speakers_batch(&pool, &ids, "alice")
+            .await
+            .unwrap();
+        assert_eq!(count, 2);
+
+        // Verify t1 and t2 changed, t3 unchanged
+        let all = TranscriptsRepository::get_all_for_meeting(&pool, "m1")
+            .await
+            .unwrap();
+        let t1 = all.iter().find(|t| t.id == "t1").unwrap();
+        let t2 = all.iter().find(|t| t.id == "t2").unwrap();
+        let t3 = all.iter().find(|t| t.id == "t3").unwrap();
+        assert_eq!(t1.speaker.as_deref(), Some("alice"));
+        assert_eq!(t2.speaker.as_deref(), Some("alice"));
+        assert_eq!(t3.speaker.as_deref(), Some("system"));
+    }
+
+    #[tokio::test]
+    async fn update_speakers_batch_empty_ids_returns_zero() {
+        let pool = create_test_pool().await;
+        let count = TranscriptsRepository::update_speakers_batch(&pool, &[], "alice")
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn update_speakers_batch_nonexistent_ids() {
+        let pool = create_test_pool().await;
+        seed_meeting(&pool, "m1", "Test").await;
+
+        let ids = vec!["nonexistent1".to_string(), "nonexistent2".to_string()];
+        let count = TranscriptsRepository::update_speakers_batch(&pool, &ids, "alice")
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[tokio::test]
+    async fn update_speakers_batch_single_id() {
+        let pool = create_test_pool().await;
+        seed_meeting(&pool, "m1", "Test").await;
+        seed_transcript(&pool, "t1", "m1", "Hello", Some("mic")).await;
+
+        let ids = vec!["t1".to_string()];
+        let count = TranscriptsRepository::update_speakers_batch(&pool, &ids, "bob")
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+
+        let all = TranscriptsRepository::get_all_for_meeting(&pool, "m1")
+            .await
+            .unwrap();
+        assert_eq!(all[0].speaker.as_deref(), Some("bob"));
+    }
+
+    #[tokio::test]
+    async fn update_speakers_batch_preserves_other_fields() {
+        let pool = create_test_pool().await;
+        seed_meeting(&pool, "m1", "Test").await;
+        seed_transcript(&pool, "t1", "m1", "Important text", Some("mic")).await;
+
+        let ids = vec!["t1".to_string()];
+        TranscriptsRepository::update_speakers_batch(&pool, &ids, "alice")
+            .await
+            .unwrap();
+
+        let all = TranscriptsRepository::get_all_for_meeting(&pool, "m1")
+            .await
+            .unwrap();
+        assert_eq!(all[0].transcript, "Important text");
+        assert_eq!(all[0].timestamp, "2026-03-05T00:00:00Z");
     }
 }

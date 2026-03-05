@@ -8,10 +8,17 @@ import { ConfidenceIndicator } from "./ConfidenceIndicator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { RecordingStatusBar } from "./RecordingStatusBar";
 import { motion, AnimatePresence } from "framer-motion";
-import { TranscriptSegmentData } from "@/types";
+import { TranscriptSegmentData, MeetingSpeaker } from "@/types";
 import { SpeakerBadge } from "./MeetingDetails/SpeakerBadge";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { Play } from "lucide-react";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { getPaletteForColor } from "@/lib/speaker-colors";
+import { Play, Check, Plus, X } from "lucide-react";
 
 export interface VirtualizedTranscriptViewProps {
     /** Transcript segments to display */
@@ -47,6 +54,13 @@ export interface VirtualizedTranscriptViewProps {
     isAudioPlaying?: boolean;
     /** Callback to play audio from a specific timestamp */
     onPlaySegment?: (startTime: number) => void;
+
+    /** Meeting speakers for dropdown */
+    speakers?: MeetingSpeaker[];
+    /** Get display name and color for a speaker key */
+    getSpeakerDisplay?: (key: string | undefined) => { name: string; color: string };
+    /** Callback for bulk assigning selected segments */
+    onBulkAssignSelected?: (segmentIds: string[], speaker: string) => void;
 }
 
 // Threshold for enabling virtualization (below this, use simple rendering)
@@ -76,38 +90,37 @@ function cleanStopWords(text: string): string {
     return cleanedText.replace(/\s+/g, ' ').trim();
 }
 
-// Speaker assignment popover component
-const SpeakerPopover = memo(function SpeakerPopover({
+// Speaker dropdown component (replaces SpeakerPopover)
+const SpeakerDropdown = memo(function SpeakerDropdown({
     speaker,
-    speakerLabel,
+    speakerDisplay,
+    speakers,
     onSelect,
 }: {
     speaker?: string;
-    speakerLabel?: string;
+    speakerDisplay?: { name: string; color: string };
+    speakers: MeetingSpeaker[];
     onSelect: (value: string | null) => void;
 }) {
-    const [open, setOpen] = useState(false);
-    const [customName, setCustomName] = useState('');
+    const [showNewInput, setShowNewInput] = useState(false);
+    const [newName, setNewName] = useState('');
 
-    const handleSelect = (value: string | null) => {
-        onSelect(value);
-        setOpen(false);
-        setCustomName('');
-    };
-
-    const handleCustomSubmit = () => {
-        const trimmed = customName.trim();
+    const handleNewSubmit = () => {
+        const trimmed = newName.trim();
         if (trimmed) {
-            handleSelect(trimmed);
+            const key = trimmed.toLowerCase().replace(/\s+/g, '_');
+            onSelect(key);
         }
+        setNewName('');
+        setShowNewInput(false);
     };
 
     return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                {speaker && speakerLabel ? (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                {speaker && speakerDisplay ? (
                     <button type="button" className="cursor-pointer" title="Click to change speaker">
-                        <SpeakerBadge name={speakerLabel} speakerKey={speaker} />
+                        <SpeakerBadge name={speakerDisplay.name} speakerKey={speaker} color={speakerDisplay.color} />
                     </button>
                 ) : (
                     <button
@@ -118,55 +131,56 @@ const SpeakerPopover = memo(function SpeakerPopover({
                         Unassigned
                     </button>
                 )}
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-2" align="start" sideOffset={4}>
-                <div className="flex flex-col gap-1">
-                    <button
-                        type="button"
-                        onClick={() => handleSelect('mic')}
-                        className={`text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${speaker === 'mic' ? 'bg-gray-100 font-medium' : ''}`}
-                    >
-                        You
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => handleSelect('system')}
-                        className={`text-left px-2 py-1.5 rounded text-sm hover:bg-gray-100 ${speaker === 'system' ? 'bg-gray-100 font-medium' : ''}`}
-                    >
-                        Other
-                    </button>
-                    <div className="border-t border-gray-200 my-1" />
-                    <form
-                        onSubmit={(e) => { e.preventDefault(); handleCustomSubmit(); }}
-                        className="flex gap-1"
-                    >
-                        <input
-                            type="text"
-                            value={customName}
-                            onChange={(e) => setCustomName(e.target.value)}
-                            placeholder="Custom name..."
-                            className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:border-blue-400"
-                            autoFocus
-                        />
-                        <button
-                            type="submit"
-                            disabled={!customName.trim()}
-                            className="px-2 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-48" align="start" sideOffset={4}>
+                {speakers.map(s => {
+                    const palette = getPaletteForColor(s.color);
+                    const isCurrent = s.speaker_key === speaker;
+                    return (
+                        <DropdownMenuItem
+                            key={s.speaker_key}
+                            onClick={() => onSelect(s.speaker_key)}
+                            className="flex items-center gap-2"
                         >
-                            Set
-                        </button>
-                    </form>
-                    <div className="border-t border-gray-200 my-1" />
-                    <button
-                        type="button"
-                        onClick={() => handleSelect(null)}
-                        className="text-left px-2 py-1.5 rounded text-sm text-gray-500 hover:bg-gray-100"
-                    >
-                        Unassign
-                    </button>
-                </div>
-            </PopoverContent>
-        </Popover>
+                            <span className={`w-2.5 h-2.5 rounded-full ${palette.dot} flex-shrink-0`} />
+                            <span className="flex-1">{s.display_name}</span>
+                            {isCurrent && <Check className="w-3.5 h-3.5 text-blue-600" />}
+                        </DropdownMenuItem>
+                    );
+                })}
+                {speakers.length > 0 && <DropdownMenuSeparator />}
+                {showNewInput ? (
+                    <div className="px-2 py-1.5">
+                        <form onSubmit={e => { e.preventDefault(); handleNewSubmit(); }} className="flex gap-1">
+                            <input
+                                autoFocus
+                                value={newName}
+                                onChange={e => setNewName(e.target.value)}
+                                placeholder="Name..."
+                                className="flex-1 text-sm border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-blue-400"
+                                onKeyDown={e => { if (e.key === 'Escape') { setShowNewInput(false); setNewName(''); } }}
+                            />
+                            <button
+                                type="submit"
+                                disabled={!newName.trim()}
+                                className="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-40"
+                            >
+                                Set
+                            </button>
+                        </form>
+                    </div>
+                ) : (
+                    <DropdownMenuItem onClick={(e) => { e.preventDefault(); setShowNewInput(true); }}>
+                        <Plus className="w-3.5 h-3.5 mr-2" />
+                        New speaker...
+                    </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onSelect(null)} className="text-gray-500">
+                    Unassign
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 });
 
@@ -182,6 +196,10 @@ const TranscriptSegment = memo(function TranscriptSegment({
     onSpeakerChange,
     isActive,
     onPlayClick,
+    speakers,
+    getSpeakerDisplay,
+    isSelected,
+    onSelectionClick,
 }: {
     id: string;
     timestamp: number;
@@ -193,25 +211,52 @@ const TranscriptSegment = memo(function TranscriptSegment({
     onSpeakerChange?: (segmentId: string, newSpeaker: string | null) => void;
     isActive?: boolean;
     onPlayClick?: (time: number) => void;
+    speakers?: MeetingSpeaker[];
+    getSpeakerDisplay?: (key: string | undefined) => { name: string; color: string };
+    isSelected?: boolean;
+    onSelectionClick?: (e: React.MouseEvent) => void;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
-    const speakerLabel = speaker === 'mic' ? 'You' : speaker === 'system' ? 'Other' : speaker;
+    const speakerInfo = getSpeakerDisplay
+        ? getSpeakerDisplay(speaker)
+        : speaker
+            ? { name: speaker === 'mic' ? 'You' : speaker === 'system' ? 'Other' : speaker, color: speaker === 'mic' ? 'blue' : speaker === 'system' ? 'purple' : 'blue' }
+            : undefined;
+
+    const hasDropdown = onSpeakerChange && speakers && speakers.length > 0;
 
     return (
         <div
             id={`segment-${id}`}
-            className={`mb-3 ${isActive ? 'border-l-2 border-blue-500 bg-blue-50/50 pl-1 -ml-1' : ''}`}
+            className={`mb-3 ${isActive ? 'border-l-2 border-blue-500 bg-blue-50/50 pl-1 -ml-1' : ''} ${
+                isSelected ? 'bg-blue-100 ring-1 ring-blue-300 rounded' : ''
+            }`}
         >
             <div className="flex items-start gap-2">
+                {/* Selection checkbox area — visible on hover or when selected */}
+                {onSelectionClick && (
+                    <button
+                        type="button"
+                        onClick={onSelectionClick}
+                        className={`mt-1 flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                            isSelected
+                                ? 'bg-blue-500 border-blue-500 text-white'
+                                : 'border-gray-300 opacity-0 group-hover:opacity-100 hover:border-gray-400'
+                        }`}
+                    >
+                        {isSelected && <Check className="w-3 h-3" />}
+                    </button>
+                )}
+
                 <Tooltip>
                     <TooltipTrigger>
                         {onPlayClick ? (
                             <button
                                 onClick={() => onPlayClick(timestamp)}
-                                className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px] hover:text-blue-600 group flex items-center gap-0.5"
+                                className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px] hover:text-blue-600 group/play flex items-center gap-0.5"
                             >
-                                <Play className="w-3 h-3 hidden group-hover:inline-block" />
-                                <span className="group-hover:text-blue-600">{formatRecordingTime(timestamp)}</span>
+                                <Play className="w-3 h-3 hidden group-hover/play:inline-block" />
+                                <span className="group-hover/play:text-blue-600">{formatRecordingTime(timestamp)}</span>
                             </button>
                         ) : (
                             <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
@@ -225,14 +270,20 @@ const TranscriptSegment = memo(function TranscriptSegment({
                         )}
                     </TooltipContent>
                 </Tooltip>
-                {onSpeakerChange ? (
-                    <SpeakerPopover
+                {hasDropdown ? (
+                    <SpeakerDropdown
                         speaker={speaker}
-                        speakerLabel={speakerLabel || undefined}
-                        onSelect={(value) => onSpeakerChange(id, value)}
+                        speakerDisplay={speakerInfo}
+                        speakers={speakers!}
+                        onSelect={(value) => onSpeakerChange!(id, value)}
                     />
-                ) : speaker && speakerLabel ? (
-                    <SpeakerBadge name={speakerLabel} speakerKey={speaker} />
+                ) : onSpeakerChange ? (
+                    // Fallback: simple badge for recording page (no speakers list)
+                    speaker && speakerInfo ? (
+                        <SpeakerBadge name={speakerInfo.name} speakerKey={speaker} color={speakerInfo.color} />
+                    ) : null
+                ) : speaker && speakerInfo ? (
+                    <SpeakerBadge name={speakerInfo.name} speakerKey={speaker} color={speakerInfo.color} />
                 ) : null}
                 <div className="flex-1">
                     {isStreaming ? (
@@ -244,6 +295,49 @@ const TranscriptSegment = memo(function TranscriptSegment({
                     )}
                 </div>
             </div>
+        </div>
+    );
+});
+
+// Selection action bar
+const SelectionActionBar = memo(function SelectionActionBar({
+    count,
+    speakers,
+    onAssign,
+    onClear,
+}: {
+    count: number;
+    speakers: MeetingSpeaker[];
+    onAssign: (speakerKey: string) => void;
+    onClear: () => void;
+}) {
+    return (
+        <div className="absolute bottom-4 left-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-3 flex items-center gap-3 z-20">
+            <span className="text-sm font-medium text-gray-700">{count} selected</span>
+            <div className="flex items-center gap-1.5 flex-1">
+                {speakers.map(s => {
+                    const palette = getPaletteForColor(s.color);
+                    return (
+                        <button
+                            key={s.speaker_key}
+                            type="button"
+                            onClick={() => onAssign(s.speaker_key)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border ${palette.border} ${palette.bg} ${palette.text} hover:opacity-80`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${palette.dot}`} />
+                            {s.display_name}
+                        </button>
+                    );
+                })}
+            </div>
+            <button
+                type="button"
+                onClick={onClear}
+                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+                <X className="w-3 h-3" />
+                Clear
+            </button>
         </div>
     );
 });
@@ -266,7 +360,71 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     currentPlaybackTime,
     isAudioPlaying,
     onPlaySegment,
+    speakers,
+    getSpeakerDisplay,
+    onBulkAssignSelected,
 }) => {
+    // Selection state
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [selectionAnchorIndex, setSelectionAnchorIndex] = useState<number | null>(null);
+
+    const handleSelectionClick = useCallback((e: React.MouseEvent, segmentId: string, segmentIndex: number) => {
+        e.stopPropagation();
+
+        if (e.shiftKey && selectionAnchorIndex !== null) {
+            // Range select
+            const start = Math.min(selectionAnchorIndex, segmentIndex);
+            const end = Math.max(selectionAnchorIndex, segmentIndex);
+            const newIds = new Set(selectedIds);
+            for (let i = start; i <= end; i++) {
+                newIds.add(segments[i].id);
+            }
+            setSelectedIds(newIds);
+        } else if (e.metaKey || e.ctrlKey) {
+            // Toggle individual
+            const newIds = new Set(selectedIds);
+            if (newIds.has(segmentId)) {
+                newIds.delete(segmentId);
+            } else {
+                newIds.add(segmentId);
+            }
+            setSelectedIds(newIds);
+            setSelectionAnchorIndex(segmentIndex);
+        } else {
+            // Single select (toggle)
+            if (selectedIds.has(segmentId) && selectedIds.size === 1) {
+                setSelectedIds(new Set());
+                setSelectionAnchorIndex(null);
+            } else {
+                setSelectedIds(new Set([segmentId]));
+                setSelectionAnchorIndex(segmentIndex);
+            }
+        }
+    }, [selectedIds, selectionAnchorIndex, segments]);
+
+    const handleBulkAssign = useCallback((speakerKey: string) => {
+        if (onBulkAssignSelected && selectedIds.size > 0) {
+            onBulkAssignSelected(Array.from(selectedIds), speakerKey);
+            setSelectedIds(new Set());
+            setSelectionAnchorIndex(null);
+        }
+    }, [onBulkAssignSelected, selectedIds]);
+
+    const clearSelection = useCallback(() => {
+        setSelectedIds(new Set());
+        setSelectionAnchorIndex(null);
+    }, []);
+
+    // ESC to clear selection
+    useEffect(() => {
+        if (selectedIds.size === 0) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') clearSelection();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [selectedIds.size, clearSelection]);
+
     // Active segment detection
     const activeSegmentId = useMemo(() => {
         if (!currentPlaybackTime || !isAudioPlaying) return null;
@@ -374,8 +532,32 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     // Use simple rendering for small lists, virtualization for large lists
     const useVirtualization = segments.length >= VIRTUALIZATION_THRESHOLD;
 
+    const canSelect = !!onBulkAssignSelected && !isRecording;
+
+    const renderSegment = (segment: TranscriptSegmentData, index: number) => {
+        const isStreaming = streamingSegmentId === segment.id;
+        return (
+            <TranscriptSegment
+                id={segment.id}
+                timestamp={segment.timestamp}
+                text={getDisplayText(segment)}
+                confidence={segment.confidence}
+                isStreaming={isStreaming}
+                showConfidence={showConfidence}
+                speaker={segment.speaker}
+                onSpeakerChange={onSpeakerChange}
+                isActive={activeSegmentId === segment.id}
+                onPlayClick={onPlaySegment}
+                speakers={speakers}
+                getSpeakerDisplay={getSpeakerDisplay}
+                isSelected={selectedIds.has(segment.id)}
+                onSelectionClick={canSelect ? (e) => handleSelectionClick(e, segment.id, index) : undefined}
+            />
+        );
+    };
+
     return (
-        <div ref={scrollRef} className="flex flex-col h-full overflow-y-auto px-4 py-2">
+        <div ref={scrollRef} className="flex flex-col h-full overflow-y-auto px-4 py-2 relative">
             {/* Recording Status Bar - Sticky at top, always visible when recording */}
             <AnimatePresence>
                 {isRecording && (
@@ -425,7 +607,6 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                     >
                         {virtualizer.getVirtualItems().map((virtualRow) => {
                             const segment = segments[virtualRow.index];
-                            const isStreaming = streamingSegmentId === segment.id;
 
                             return (
                                 <div
@@ -439,19 +620,9 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         width: "100%",
                                         transform: `translateY(${virtualRow.start}px)`,
                                     }}
+                                    className="group"
                                 >
-                                    <TranscriptSegment
-                                        id={segment.id}
-                                        timestamp={segment.timestamp}
-                                        text={getDisplayText(segment)}
-                                        confidence={segment.confidence}
-                                        isStreaming={isStreaming}
-                                        showConfidence={showConfidence}
-                                        speaker={segment.speaker}
-                                        onSpeakerChange={onSpeakerChange}
-                                        isActive={activeSegmentId === segment.id}
-                                        onPlayClick={onPlaySegment}
-                                    />
+                                    {renderSegment(segment, virtualRow.index)}
                                 </div>
                             );
                         })}
@@ -490,7 +661,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                 // Simple rendering for small lists (better animations)
                 <>
                     <div className="space-y-1">
-                        {segments.map((segment) => {
+                        {segments.map((segment, index) => {
                             const isStreaming = streamingSegmentId === segment.id;
 
                             return (
@@ -499,19 +670,9 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                     initial={{ opacity: 0, y: 5 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.15 }}
+                                    className="group"
                                 >
-                                    <TranscriptSegment
-                                        id={segment.id}
-                                        timestamp={segment.timestamp}
-                                        text={getDisplayText(segment)}
-                                        confidence={segment.confidence}
-                                        isStreaming={isStreaming}
-                                        showConfidence={showConfidence}
-                                        speaker={segment.speaker}
-                                        onSpeakerChange={onSpeakerChange}
-                                        isActive={activeSegmentId === segment.id}
-                                        onPlayClick={onPlaySegment}
-                                    />
+                                    {renderSegment(segment, index)}
                                 </motion.div>
                             );
                         })}
@@ -548,6 +709,16 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                 </>
             )}
             </div>
+
+            {/* Selection action bar */}
+            {selectedIds.size > 0 && speakers && speakers.length > 0 && (
+                <SelectionActionBar
+                    count={selectedIds.size}
+                    speakers={speakers}
+                    onAssign={handleBulkAssign}
+                    onClear={clearSelection}
+                />
+            )}
         </div>
     );
 };

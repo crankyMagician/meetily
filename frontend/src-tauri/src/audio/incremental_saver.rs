@@ -437,6 +437,8 @@ mod tests {
             let chunk = AudioChunk {
                 data: vec![0.5f32; 24000],  // 0.5s at 48kHz
                 sample_rate: 48000,
+                timestamp: 0.0,
+                chunk_id: 0,
                 device_type: DeviceType::Microphone,
             };
             saver.add_chunk(chunk).unwrap();

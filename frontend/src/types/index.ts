@@ -114,6 +114,23 @@ export interface TranscriptSegmentData {
   speaker?: string; // "mic" or "system"
 }
 
+// Speaker management types
+export interface MeetingSpeaker {
+  id: string;
+  meeting_id: string;
+  speaker_key: string;
+  display_name: string;
+  suggested_by: string | null;
+  created_at: string | null;
+  color: string | null;
+  sort_order: number | null;
+}
+
+export interface SpeakerSegmentCount {
+  speaker: string;
+  count: number;
+}
+
 // Meeting context types
 export type MeetingContextType =
   | 'Sales Call'

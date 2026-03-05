@@ -45,6 +45,8 @@ function MeetingDetailsContent() {
     loadMore,
     error: transcriptError,
     updateSegmentSpeaker,
+    bulkUpdateSpeaker,
+    bulkUpdateSegmentsSpeaker,
   } = usePaginatedTranscripts({ meetingId: meetingId || '' });
 
   // Check if gemma3:1b model is available in Ollama
@@ -377,6 +379,8 @@ function MeetingDetailsContent() {
     loadedCount={loadedCount}
     onLoadMore={loadMore}
     updateSegmentSpeaker={updateSegmentSpeaker}
+    bulkUpdateSpeaker={bulkUpdateSpeaker}
+    bulkUpdateSegmentsSpeaker={bulkUpdateSegmentsSpeaker}
     meetingId={meetingId || ''}
     audioPath={audioPath}
   />;

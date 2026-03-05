@@ -25,6 +25,10 @@ interface UsePaginatedTranscriptsReturn {
     loadMore: () => Promise<void>;
     reset: () => void;
     updateSegmentSpeaker: (transcriptId: string, speaker: string | null) => void;
+    /** Bulk update all segments matching fromSpeaker to toSpeaker (local state only) */
+    bulkUpdateSpeaker: (fromSpeaker: string, toSpeaker: string) => void;
+    /** Bulk update specific segment IDs to a speaker (local state only) */
+    bulkUpdateSegmentsSpeaker: (segmentIds: string[], speaker: string) => void;
 }
 
 /**
@@ -186,6 +190,21 @@ export function usePaginatedTranscripts({
         );
     }, []);
 
+    // Bulk update all segments matching fromSpeaker to toSpeaker (local state)
+    const bulkUpdateSpeaker = useCallback((fromSpeaker: string, toSpeaker: string) => {
+        setTranscripts(prev =>
+            prev.map(t => t.speaker === fromSpeaker ? { ...t, speaker: toSpeaker } : t)
+        );
+    }, []);
+
+    // Bulk update specific segment IDs to a speaker (local state)
+    const bulkUpdateSegmentsSpeaker = useCallback((segmentIds: string[], speaker: string) => {
+        const idSet = new Set(segmentIds);
+        setTranscripts(prev =>
+            prev.map(t => idSet.has(t.id) ? { ...t, speaker } : t)
+        );
+    }, []);
+
     // Convert to segments (memoized)
     const segments = useMemo(() =>
         convertTranscriptsToSegments(transcripts),
@@ -205,5 +224,7 @@ export function usePaginatedTranscripts({
         loadMore,
         reset,
         updateSegmentSpeaker,
+        bulkUpdateSpeaker,
+        bulkUpdateSegmentsSpeaker,
     };
 }

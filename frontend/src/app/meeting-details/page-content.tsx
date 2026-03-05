@@ -23,6 +23,7 @@ import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
 import { useGrading } from '@/hooks/meeting-details/useGrading';
 import { useChat } from '@/hooks/meeting-details/useChat';
+import { useSpeakers } from '@/hooks/meeting-details/useSpeakers';
 import { useConfig } from '@/contexts/ConfigContext';
 
 export default function PageContent({
@@ -39,6 +40,8 @@ export default function PageContent({
   loadedCount,
   onLoadMore,
   updateSegmentSpeaker,
+  bulkUpdateSpeaker,
+  bulkUpdateSegmentsSpeaker,
   audioPath,
 }: {
   meeting: any;
@@ -54,6 +57,8 @@ export default function PageContent({
   loadedCount?: number;
   onLoadMore?: () => void;
   updateSegmentSpeaker?: (transcriptId: string, speaker: string | null) => void;
+  bulkUpdateSpeaker?: (fromSpeaker: string, toSpeaker: string) => void;
+  bulkUpdateSegmentsSpeaker?: (segmentIds: string[], speaker: string) => void;
   meetingId?: string;
   audioPath?: string | null;
 }) {
@@ -75,6 +80,9 @@ export default function PageContent({
 
   // Audio player
   const audio = useAudioPlayer(audioPath ?? null);
+
+  // Speaker management
+  const speakerHook = useSpeakers({ meetingId: meeting.id });
 
   // Review mode state
   const [isReviewMode, setIsReviewMode] = useState(false);
@@ -212,7 +220,7 @@ export default function PageContent({
     modelConfig,
   });
 
-  // Speaker change handler (cycles speaker on click)
+  // Speaker change handler
   const handleSpeakerChange = useCallback(async (segmentId: string, newSpeaker: string | null) => {
     // Optimistic update
     updateSegmentSpeaker?.(segmentId, newSpeaker);
@@ -222,11 +230,13 @@ export default function PageContent({
         transcriptId: segmentId,
         speaker: newSpeaker,
       });
+      // Refresh segment counts after speaker change
+      speakerHook.refreshSpeakers();
     } catch (error) {
       console.error('Failed to update speaker:', error);
       toast.error('Failed to update speaker');
     }
-  }, [updateSegmentSpeaker]);
+  }, [updateSegmentSpeaker, speakerHook]);
 
   // Review mode: assign speaker and advance
   const handleReviewAssign = useCallback((speaker: string) => {
@@ -258,12 +268,41 @@ export default function PageContent({
           updateSegmentSpeaker?.(s.id, speaker);
         }
       });
-      toast.success(`Assigned ${count} segments as ${speaker === 'mic' ? 'You' : 'Other'}`);
+      const display = speakerHook.getSpeakerDisplay(speaker);
+      toast.success(`Assigned ${count} segments as ${display.name}`);
+      speakerHook.refreshSpeakers();
     } catch (error) {
       console.error('Failed to bulk assign speakers:', error);
       toast.error('Failed to assign speakers');
     }
-  }, [meeting.id, segments, updateSegmentSpeaker]);
+  }, [meeting.id, segments, updateSegmentSpeaker, speakerHook]);
+
+  // Bulk assign selected segments (from multi-select)
+  const handleBulkAssignSelected = useCallback(async (segmentIds: string[], speaker: string) => {
+    // Optimistic local update
+    bulkUpdateSegmentsSpeaker?.(segmentIds, speaker);
+
+    try {
+      await invoke<number>('api_update_transcript_speakers_batch', {
+        transcriptIds: segmentIds,
+        speaker,
+      });
+      const display = speakerHook.getSpeakerDisplay(speaker);
+      toast.success(`Assigned ${segmentIds.length} segments as ${display.name}`);
+      speakerHook.refreshSpeakers();
+    } catch (error) {
+      console.error('Failed to batch assign speakers:', error);
+      toast.error('Failed to assign speakers');
+    }
+  }, [bulkUpdateSegmentsSpeaker, speakerHook]);
+
+  // Handle speaker reassignment (merge) — update local transcript state too
+  const handleReassignSpeaker = useCallback(async (from: string, to: string): Promise<number> => {
+    const count = await speakerHook.reassignSpeaker(from, to);
+    // Update local transcript state
+    bulkUpdateSpeaker?.(from, to);
+    return count;
+  }, [speakerHook, bulkUpdateSpeaker]);
 
   // Load meeting context on mount
   useEffect(() => {
@@ -337,6 +376,18 @@ export default function PageContent({
           onLoadMore={onLoadMore}
           onSpeakerChange={handleSpeakerChange}
           onBulkAssignSpeaker={handleBulkAssignSpeaker}
+          // Speaker management
+          speakers={speakerHook.speakers}
+          speakerSegmentCounts={speakerHook.segmentCounts}
+          getSpeakerDisplay={speakerHook.getSpeakerDisplay}
+          onRenameSpeaker={speakerHook.renameSpeaker}
+          onUpdateSpeakerColor={speakerHook.updateColor}
+          onAddSpeaker={speakerHook.addSpeaker}
+          onDeleteSpeaker={speakerHook.deleteSpeaker}
+          onReassignSpeaker={handleReassignSpeaker}
+          onRefreshSpeakers={speakerHook.refreshSpeakers}
+          onBulkAssignSelected={handleBulkAssignSelected}
+          meetingId={meeting.id}
           // Audio playback props
           audioIsPlaying={audio.isPlaying}
           audioCurrentTime={audio.currentTime}

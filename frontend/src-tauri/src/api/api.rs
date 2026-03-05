@@ -1474,6 +1474,99 @@ pub async fn api_get_meeting_speakers<R: Runtime>(
 }
 
 #[tauri::command]
+pub async fn api_update_speaker_color<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker_key: String,
+    color: String,
+) -> Result<(), String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::set_speaker_color(pool, &meeting_id, &speaker_key, &color)
+        .await
+        .map_err(|e| format!("Failed to update speaker color: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_delete_speaker<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker_key: String,
+) -> Result<(), String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::delete_speaker(pool, &meeting_id, &speaker_key)
+        .await
+        .map_err(|e| format!("Failed to delete speaker: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_get_speaker_segment_counts<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<crate::database::repositories::speaker::SpeakerSegmentCount>, String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::get_speaker_segment_counts(pool, &meeting_id)
+        .await
+        .map_err(|e| format!("Failed to get segment counts: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_reassign_speaker<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    from_speaker: String,
+    to_speaker: String,
+) -> Result<u64, String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::reassign_speaker(pool, &meeting_id, &from_speaker, &to_speaker)
+        .await
+        .map_err(|e| format!("Failed to reassign speaker: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_ensure_meeting_speakers<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<crate::database::repositories::speaker::MeetingSpeaker>, String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::ensure_default_speakers(pool, &meeting_id)
+        .await
+        .map_err(|e| format!("Failed to ensure meeting speakers: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_add_speaker<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker_key: String,
+    display_name: String,
+    color: Option<String>,
+) -> Result<crate::database::repositories::speaker::MeetingSpeaker, String> {
+    let pool = state.db_manager.pool();
+    SpeakerRepository::add_speaker(pool, &meeting_id, &speaker_key, &display_name, color.as_deref())
+        .await
+        .map_err(|e| format!("Failed to add speaker: {}", e))
+}
+
+#[tauri::command]
+pub async fn api_update_transcript_speakers_batch<R: Runtime>(
+    _app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    transcript_ids: Vec<String>,
+    speaker: String,
+) -> Result<u64, String> {
+    let pool = state.db_manager.pool();
+    TranscriptsRepository::update_speakers_batch(pool, &transcript_ids, &speaker)
+        .await
+        .map_err(|e| format!("Failed to batch update speakers: {}", e))
+}
+
+#[tauri::command]
 pub async fn api_set_speaker_name<R: Runtime>(
     _app: AppHandle<R>,
     state: tauri::State<'_, AppState>,
@@ -1497,6 +1590,21 @@ pub async fn api_identify_speakers<R: Runtime>(
 ) -> Result<Vec<crate::chat::speaker_identifier::SpeakerSuggestion>, String> {
     let pool = state.db_manager.pool();
     crate::chat::speaker_identifier::SpeakerIdentifier::identify_speakers(
+        &app, pool, &meeting_id, &model, &model_name,
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn api_identify_and_assign_speakers<R: Runtime>(
+    app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    model: String,
+    model_name: String,
+) -> Result<crate::chat::speaker_identifier::IdentifyAndAssignResult, String> {
+    let pool = state.db_manager.pool();
+    crate::chat::speaker_identifier::SpeakerIdentifier::identify_and_assign_speakers(
         &app, pool, &meeting_id, &model, &model_name,
     )
     .await

@@ -327,7 +327,49 @@ async def my_endpoint(request: MyRequest) -> MyResponse:
 - Use `DatabaseManager` class for all DB operations
 - Async operations with `aiosqlite`
 
-## Testing and Debugging
+## Testing
+
+### Running Tests
+
+```bash
+# Rust tests (from frontend/src-tauri/)
+cargo test --lib                    # All Rust unit tests
+cargo test --lib -- speaker         # Filter to speaker-related tests
+cargo test --lib -- transcript      # Filter to transcript-related tests
+
+# TypeScript tests (from frontend/)
+pnpm test                           # Run all vitest tests once
+pnpm test:watch                     # Run vitest in watch mode
+```
+
+### Test Infrastructure
+
+**Rust** (47 tests):
+- **Shared test helpers**: `database/test_helpers.rs` — `create_test_pool()` (in-memory SQLite + migrations), `seed_meeting()`, `seed_transcript()`
+- **Speaker repository**: `database/repositories/speaker.rs` — 27 tests (pure helper functions + async DB operations)
+- **Transcript repository**: `database/repositories/transcript.rs` — 5 tests (batch speaker update)
+- **Speaker identifier parsing**: `chat/speaker_identifier.rs` — 15 tests (JSON parsing, fallback handling)
+
+**TypeScript** (vitest, 22 tests):
+- **Speaker colors**: `src/lib/speaker-colors.test.ts` — palette structure, color selection, hash stability
+- Config: `frontend/vitest.config.ts`, path alias `@` → `src/`
+
+**Pattern for adding new Rust DB tests**:
+```rust
+#[cfg(test)]
+mod tests {
+    use crate::database::test_helpers::{create_test_pool, seed_meeting, seed_transcript};
+
+    #[tokio::test]
+    async fn my_test() {
+        let pool = create_test_pool().await;  // Fresh in-memory DB each test
+        seed_meeting(&pool, "m1", "Test Meeting").await;
+        // ... test logic
+    }
+}
+```
+
+## Debugging
 
 ### Frontend Debugging
 
@@ -481,11 +523,19 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 - Meeting context fields (`context_type`, `context_notes`) stored on `meetings` table
 - Context commands: `api_save_meeting_context`, `api_get_meeting_context` in `api/api.rs`
 
-**Speaker Assignment** (new):
-- [frontend/src/components/VirtualizedTranscriptView.tsx](frontend/src/components/VirtualizedTranscriptView.tsx) - `SpeakerPopover` component for assigning speakers via popover menu (quick picks + custom name input)
-- [frontend/src/components/MeetingDetails/SpeakerBadge.tsx](frontend/src/components/MeetingDetails/SpeakerBadge.tsx) - Speaker badge display with color coding
-- [frontend/src-tauri/src/chat/speaker_identifier.rs](frontend/src-tauri/src/chat/speaker_identifier.rs) - LLM-based speaker identification (suggests speaker labels for system audio segments)
-- [frontend/src-tauri/src/database/repositories/speaker.rs](frontend/src-tauri/src/database/repositories/speaker.rs) - Speaker suggestions DB repository
+**Speaker Management** (new):
+- [frontend/src-tauri/src/database/repositories/speaker.rs](frontend/src-tauri/src/database/repositories/speaker.rs) - `SpeakerRepository` CRUD, reassign, ensure_default_speakers (27 unit tests)
+- [frontend/src-tauri/src/chat/speaker_identifier.rs](frontend/src-tauri/src/chat/speaker_identifier.rs) - LLM-based speaker identification and assignment (15 parsing tests)
+- [frontend/src/lib/speaker-colors.ts](frontend/src/lib/speaker-colors.ts) - 12-palette color system, hash-based selection (22 vitest tests)
+- [frontend/src/components/MeetingDetails/SpeakerManagementPanel.tsx](frontend/src/components/MeetingDetails/SpeakerManagementPanel.tsx) - Rename, recolor, merge, delete, add speakers
+- [frontend/src/hooks/meeting-details/useSpeakers.ts](frontend/src/hooks/meeting-details/useSpeakers.ts) - Central speaker state hook
+- [frontend/src/components/VirtualizedTranscriptView.tsx](frontend/src/components/VirtualizedTranscriptView.tsx) - `SpeakerDropdown` + multi-select with Shift/Cmd+click
+- [frontend/src/components/MeetingDetails/SpeakerBadge.tsx](frontend/src/components/MeetingDetails/SpeakerBadge.tsx) - Speaker badge with palette-based color coding
+
+**Test Infrastructure**:
+- [frontend/src-tauri/src/database/test_helpers.rs](frontend/src-tauri/src/database/test_helpers.rs) - Shared test pool + seed helpers for Rust DB tests
+- [frontend/vitest.config.ts](frontend/vitest.config.ts) - Vitest configuration for TypeScript tests
+- [frontend/src/lib/speaker-colors.test.ts](frontend/src/lib/speaker-colors.test.ts) - Speaker color utility tests
 
 ### Known Issues
 
