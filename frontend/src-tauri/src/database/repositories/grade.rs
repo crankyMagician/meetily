@@ -78,7 +78,7 @@ impl GradeRepository {
         meeting_id: &str,
     ) -> Result<Option<CommunicationGrade>, sqlx::Error> {
         sqlx::query_as::<_, CommunicationGrade>(
-            "SELECT * FROM communication_grades WHERE meeting_id = ? ORDER BY created_at DESC LIMIT 1",
+            "SELECT id, meeting_id, status, result, error, model, model_name, created_at, updated_at, grade_target, focus_areas, user_role FROM communication_grades WHERE meeting_id = ? ORDER BY created_at DESC LIMIT 1",
         )
         .bind(meeting_id)
         .fetch_optional(pool)
@@ -90,7 +90,7 @@ impl GradeRepository {
         id: &str,
     ) -> Result<Option<CommunicationGrade>, sqlx::Error> {
         sqlx::query_as::<_, CommunicationGrade>(
-            "SELECT * FROM communication_grades WHERE id = ?",
+            "SELECT id, meeting_id, status, result, error, model, model_name, created_at, updated_at, grade_target, focus_areas, user_role FROM communication_grades WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(pool)

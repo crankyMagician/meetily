@@ -144,6 +144,9 @@ pub struct CommunicationGrade {
     pub model_name: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub grade_target: Option<String>,
+    pub focus_areas: Option<String>,
+    pub user_role: Option<String>,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]

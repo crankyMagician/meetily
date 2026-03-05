@@ -286,9 +286,14 @@ pnpm tauri:dev
 
 # Production build
 pnpm tauri:build
+
+# Quick rebuild and install to /Applications (incremental, much faster)
+./rebuild_install.sh
 ```
 
 The application will be built with Metal GPU acceleration automatically.
+
+> **Note:** If you run dev builds that add new database migrations, the previously installed app will crash on launch. Run `./rebuild_install.sh` to rebuild and reinstall with the latest migrations.
 
 </details>
 

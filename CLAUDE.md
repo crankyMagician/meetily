@@ -26,7 +26,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # macOS Development
 ./clean_run.sh              # Clean build and run with info logging
 ./clean_run.sh debug        # Run with debug logging
-./clean_build.sh            # Production build
+./clean_build.sh            # Production build (full clean)
+./rebuild_install.sh        # Quick rebuild + install to /Applications (incremental, much faster)
 
 # Windows Development
 clean_run_windows.bat       # Clean build and run
@@ -424,6 +425,8 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 
 7. **Audio Permissions**: Request permissions early. macOS requires both microphone AND screen recording for system audio.
 
+8. **Database Model ↔ Migration Sync**: When adding columns via SQLx migrations, always update the corresponding Rust `FromRow` struct in `database/models.rs` to include the new fields. Queries using `SELECT *` or `query_as` will fail at runtime if the struct doesn't match the schema. Prefer explicit column lists in `SELECT` queries over `SELECT *` for resilience.
+
 ## Repository-Specific Conventions
 
 - **Logging Format**: Backend uses detailed formatting with filename:line:function
@@ -441,6 +444,9 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 - [frontend/src-tauri/src/lib.rs](frontend/src-tauri/src/lib.rs) - Main Tauri entry point, command registration
 - [frontend/src-tauri/src/audio/mod.rs](frontend/src-tauri/src/audio/mod.rs) - Audio module exports
 - [backend/app/main.py](backend/app/main.py) - FastAPI application, API endpoints
+
+**Build Scripts**:
+- [frontend/rebuild_install.sh](frontend/rebuild_install.sh) - Quick incremental rebuild + install to `/Applications` (use after migration changes)
 
 **Audio System**:
 - [frontend/src-tauri/src/audio/recording_manager.rs](frontend/src-tauri/src/audio/recording_manager.rs) - Recording orchestration
@@ -491,3 +497,4 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 6. **Speaker diarization is source-based, not voice-based** — The current system tags segments as `mic` (DeviceType::Microphone) or `system` (DeviceType::System) based on which audio input device captured them. This means "You" = microphone audio and "Other" = system/speaker audio. It does NOT perform true speaker diarization (voice fingerprinting to distinguish Person A from Person B within the same audio stream). The `speaker_identifier.rs` module exists as an LLM-based post-hoc approach that analyzes transcript text patterns to suggest speaker labels for system audio segments, but it cannot distinguish individual voices in real-time. True diarization would require integrating a model like `pyannote.audio` or `NeMo MSDD` into the audio pipeline to cluster voice embeddings per speaker.
 7. **Dev startup race condition** — `clean_run.sh` runs `pnpm build` (static export) then `pnpm run tauri dev`, which runs `beforeDevCommand: "pnpm dev"` to start the Next.js dev server. Tauri opens the webview immediately, often before Next.js finishes compiling pages, causing a 404. Workaround: wait a few seconds then reload the page, or use `pnpm run tauri dev` directly (without `clean_run.sh`) when iterating on frontend changes. Also, always kill stale processes on port 3118 before restarting (`lsof -ti:3118 | xargs kill -9`).
 8. **Do not use the in-app updater during development** — The Tauri updater replaces the dev binary with the release build, which will crash or behave unexpectedly. To get upstream fixes on a feature branch, use `git merge main` instead.
+9. **Installed app crashes after running dev builds with new migrations** — If you run dev builds that apply new SQLx migrations, the installed app at `/Applications/Meetily.app/` (which has older migrations compiled in) will crash on launch with `panic_cannot_unwind` because SQLx rejects unknown migrations. Fix: run `./rebuild_install.sh` from `frontend/` to rebuild and reinstall the app with current migrations. This is needed any time new migration files are added.
