@@ -14,7 +14,7 @@ export function useGrading({ meetingId, modelConfig }: UseGradingProps) {
   const [gradeResult, setGradeResult] = useState<GradeResult | null>(null);
   const [gradeError, setGradeError] = useState<string | null>(null);
   const [gradeId, setGradeId] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch existing grade on mount
   useEffect(() => {
@@ -47,14 +47,17 @@ export function useGrading({ meetingId, modelConfig }: UseGradingProps) {
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current);
+      clearTimeout(pollingRef.current);
       pollingRef.current = null;
     }
   }, []);
 
   const startPolling = useCallback((id: string) => {
     stopPolling();
-    pollingRef.current = setInterval(async () => {
+    let delay = 2000;
+    const MAX_DELAY = 10000;
+
+    const poll = async () => {
       try {
         const response = await invoke<GradeResponse>('api_get_grade', {
           meetingId,
@@ -65,20 +68,26 @@ export function useGrading({ meetingId, modelConfig }: UseGradingProps) {
           setGradeStatus('completed');
           setGradeResult(response.result);
           setGradeError(null);
-          stopPolling();
+          pollingRef.current = null;
           toast.success('Communication grade ready!');
+          return;
         } else if (response.status === 'failed') {
           setGradeStatus('failed');
           setGradeError(response.error || 'Grade generation failed');
-          stopPolling();
+          pollingRef.current = null;
           toast.error('Grade generation failed', {
             description: response.error || undefined,
           });
+          return;
         }
       } catch (error) {
         console.error('Error polling grade:', error);
       }
-    }, 2000);
+      delay = Math.min(delay * 1.5, MAX_DELAY);
+      pollingRef.current = setTimeout(poll, delay);
+    };
+
+    pollingRef.current = setTimeout(poll, delay);
   }, [meetingId, stopPolling]);
 
   const generateGrade = useCallback(async (options?: GradingOptions) => {

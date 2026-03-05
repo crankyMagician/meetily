@@ -212,13 +212,6 @@ export default function PageContent({
     modelConfig,
   });
 
-  // Refresh chat messages when switching back to chat tab
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      chat.refreshMessages();
-    }
-  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Speaker change handler (cycles speaker on click)
   const handleSpeakerChange = useCallback(async (segmentId: string, newSpeaker: string | null) => {
     // Optimistic update
@@ -385,7 +378,7 @@ export default function PageContent({
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {activeTab === 'summary' && (
               <SummaryPanel
                 meeting={meeting}

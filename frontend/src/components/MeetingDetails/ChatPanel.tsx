@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, memo } from 'react';
 import { ChatMessageResponse } from '@/types';
 import { ChatMessageBubble } from './ChatMessage';
 import { ChatInput } from './ChatInput';
@@ -14,7 +14,7 @@ interface ChatPanelProps {
   meetingId?: string | null;
 }
 
-export function ChatPanel({
+export const ChatPanel = memo(function ChatPanel({
   messages,
   isLoading,
   isSending,
@@ -36,7 +36,7 @@ export function ChatPanel({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
@@ -79,4 +79,4 @@ export function ChatPanel({
       />
     </div>
   );
-}
+});

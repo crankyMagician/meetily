@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { GradeResult, GradingOptions } from '@/types';
 import { LoaderIcon, Award, TrendingUp, Lightbulb, Target } from 'lucide-react';
 
@@ -111,7 +111,7 @@ function GradingConfigForm({ onSubmit }: { onSubmit: (options: GradingOptions) =
   );
 }
 
-export function GradePanel({ status, result, error, onGenerate }: GradePanelProps) {
+export const GradePanel = memo(function GradePanel({ status, result, error, onGenerate }: GradePanelProps) {
   if (status === 'idle') {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
@@ -240,4 +240,4 @@ export function GradePanel({ status, result, error, onGenerate }: GradePanelProp
       </div>
     </div>
   );
-}
+});

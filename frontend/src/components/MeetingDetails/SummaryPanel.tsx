@@ -8,7 +8,7 @@ import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
 import Analytics from '@/lib/analytics';
-import { RefObject } from 'react';
+import { RefObject, memo } from 'react';
 
 interface SummaryPanelProps {
   meeting: {
@@ -50,7 +50,7 @@ interface SummaryPanelProps {
   onOpenModelSettings?: (openFn: () => void) => void;
 }
 
-export function SummaryPanel({
+export const SummaryPanel = memo(function SummaryPanel({
   meeting,
   meetingTitle,
   onTitleChange,
@@ -88,7 +88,7 @@ export function SummaryPanel({
   const isSummaryLoading = summaryStatus === 'processing' || summaryStatus === 'summarizing' || summaryStatus === 'regenerating';
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+    <div className="h-full min-h-0 flex flex-col bg-white overflow-hidden">
       {/* Title area */}
       <div className="p-4 border-b border-gray-200">
         {/* <EditableTitle
@@ -274,4 +274,4 @@ export function SummaryPanel({
       )}
     </div>
   );
-}
+});

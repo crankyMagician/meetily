@@ -50,7 +50,7 @@ export interface VirtualizedTranscriptViewProps {
 }
 
 // Threshold for enabling virtualization (below this, use simple rendering)
-const VIRTUALIZATION_THRESHOLD = 10;
+const VIRTUALIZATION_THRESHOLD = 5;
 
 // Helper function to format seconds as recording-relative time [MM:SS]
 function formatRecordingTime(seconds: number | undefined): string {
