@@ -355,7 +355,7 @@ export default function PageContent({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="flex flex-col h-screen bg-gray-50"
+      className="flex flex-col h-screen bg-surface-secondary"
     >
       <div className="flex flex-1 overflow-hidden">
         <TranscriptPanel
@@ -404,9 +404,9 @@ export default function PageContent({
           onReviewAssignSpeaker={handleReviewAssign}
           onReviewSkipSegment={handleReviewSkip}
         />
-        <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+        <div className="flex-1 min-w-0 flex flex-col bg-surface overflow-hidden">
           {/* Context selector + Tabs header */}
-          <div className="px-4 pt-3 pb-0 border-b border-gray-200 space-y-2">
+          <div className="px-4 pt-3 pb-0 border-b border-border space-y-2">
             <div className="flex items-center justify-between">
               <MeetingContextSelector
                 meetingId={meeting.id}

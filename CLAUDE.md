@@ -15,6 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Transcription**: Whisper.cpp (local, GPU-accelerated)
 - **Backend API**: FastAPI + SQLite (aiosqlite)
 - **LLM Integration**: Ollama (local), Claude, Groq, OpenRouter
+- **Theming**: `next-themes` (light/dark/system), CSS custom properties, Tailwind `darkMode: 'class'`
 
 ## Essential Development Commands
 
@@ -350,8 +351,8 @@ pnpm test:watch                     # Run vitest in watch mode
 - **Transcript repository**: `database/repositories/transcript.rs` — 5 tests (batch speaker update)
 - **Speaker identifier parsing**: `chat/speaker_identifier.rs` — 15 tests (JSON parsing, fallback handling)
 
-**TypeScript** (vitest, 22 tests):
-- **Speaker colors**: `src/lib/speaker-colors.test.ts` — palette structure, color selection, hash stability
+**TypeScript** (vitest, 26 tests):
+- **Speaker colors**: `src/lib/speaker-colors.test.ts` — palette structure, color selection, hash stability, dark mode fields, `getThemedClasses()` output
 - Config: `frontend/vitest.config.ts`, path alias `@` → `src/`
 
 **Pattern for adding new Rust DB tests**:
@@ -469,6 +470,13 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 
 8. **Database Model ↔ Migration Sync**: When adding columns via SQLx migrations, always update the corresponding Rust `FromRow` struct in `database/models.rs` to include the new fields. Queries using `SELECT *` or `query_as` will fail at runtime if the struct doesn't match the schema. Prefer explicit column lists in `SELECT` queries over `SELECT *` for resilience.
 
+9. **Theme-Aware Colors**: All components use semantic CSS variable-based colors, not hardcoded Tailwind grays. Follow these mappings:
+   - `bg-white` → `bg-surface` | `bg-gray-50` → `bg-surface-secondary` | `bg-gray-100` → `bg-surface-tertiary` | `bg-gray-200` → `bg-surface-hover`
+   - `text-gray-900/800` → `text-foreground` | `text-gray-700` → `text-text-primary` | `text-gray-600` → `text-text-secondary` | `text-gray-500` → `text-muted-foreground` | `text-gray-400` → `text-text-placeholder`
+   - `border-gray-200` → `border-border` | `border-gray-100` → `border-border-subtle` | `border-gray-300` → `border-input`
+   - For accent colors (blue, red, green), keep the light value and add a `dark:` variant: e.g., `bg-blue-50 dark:bg-blue-950`, `text-blue-700 dark:text-blue-300`
+   - Brand/status colors (`bg-blue-600 text-white`, `bg-red-500`, `bg-green-500`) work in both themes — keep as-is
+
 ## Repository-Specific Conventions
 
 - **Logging Format**: Backend uses detailed formatting with filename:line:function
@@ -532,6 +540,14 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 - [frontend/src/components/VirtualizedTranscriptView.tsx](frontend/src/components/VirtualizedTranscriptView.tsx) - `SpeakerDropdown` + multi-select with Shift/Cmd+click
 - [frontend/src/components/MeetingDetails/SpeakerBadge.tsx](frontend/src/components/MeetingDetails/SpeakerBadge.tsx) - Speaker badge with palette-based color coding
 
+**Theme System**:
+- [frontend/tailwind.config.ts](frontend/tailwind.config.ts) - `darkMode: 'class'`, semantic color mappings (`surface`, `surface-secondary`, `text-primary`, etc.)
+- [frontend/src/app/globals.css](frontend/src/app/globals.css) - CSS custom properties for `:root` (light) and `.dark` themes
+- [frontend/src/app/layout.tsx](frontend/src/app/layout.tsx) - `ThemeProvider` from `next-themes` wrapping the app
+- [frontend/src/components/ThemeToggle.tsx](frontend/src/components/ThemeToggle.tsx) - Theme toggle (light/dark/system), compact and full modes
+- [frontend/src/components/PreferenceSettings.tsx](frontend/src/components/PreferenceSettings.tsx) - "Appearance" section with theme toggle
+- [frontend/src/lib/speaker-colors.ts](frontend/src/lib/speaker-colors.ts) - Dark mode palette fields (`darkBg`, `darkText`, `darkBorder`) + `getThemedClasses()` helper
+
 **Test Infrastructure**:
 - [frontend/src-tauri/src/database/test_helpers.rs](frontend/src-tauri/src/database/test_helpers.rs) - Shared test pool + seed helpers for Rust DB tests
 - [frontend/vitest.config.ts](frontend/vitest.config.ts) - Vitest configuration for TypeScript tests
@@ -548,3 +564,4 @@ $env:RUST_LOG="debug"; ./clean_run_windows.bat
 7. **Dev startup race condition** — `clean_run.sh` runs `pnpm build` (static export) then `pnpm run tauri dev`, which runs `beforeDevCommand: "pnpm dev"` to start the Next.js dev server. Tauri opens the webview immediately, often before Next.js finishes compiling pages, causing a 404. Workaround: wait a few seconds then reload the page, or use `pnpm run tauri dev` directly (without `clean_run.sh`) when iterating on frontend changes. Also, always kill stale processes on port 3118 before restarting (`lsof -ti:3118 | xargs kill -9`).
 8. **Do not use the in-app updater during development** — The Tauri updater replaces the dev binary with the release build, which will crash or behave unexpectedly. To get upstream fixes on a feature branch, use `git merge main` instead.
 9. **Installed app crashes after running dev builds with new migrations** — If you run dev builds that apply new SQLx migrations, the installed app at `/Applications/Meetily.app/` (which has older migrations compiled in) will crash on launch with `panic_cannot_unwind` because SQLx rejects unknown migrations. Fix: run `./rebuild_install.sh` from `frontend/` to rebuild and reinstall the app with current migrations. This is needed any time new migration files are added.
+10. **SQLx proc-macro cache prevents new migrations from embedding** — The `sqlx::migrate!()` macro is expanded by `sqlx-macros` at compile time. Its output is cached in `target/release/.fingerprint/sqlx-macros-*`. Running `cargo clean -p meetily` alone does NOT invalidate this cache, so new migration files won't be picked up. Fix: also delete the sqlx macro fingerprints: `rm -rf target/release/.fingerprint/sqlx-macros-*` before rebuilding. The `rebuild_install.sh` script now removes the old app bundle with `rm -rf` before copying to avoid stale binary issues.

@@ -17,11 +17,11 @@ export function ModelDownloadProgress({ status, modelName, onCancel }: ModelDown
   const isCompleted = progress >= 100;
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          <span className="text-sm font-medium text-blue-900">
+          <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
             {isCompleted ? 'Finalizing...' : `Downloading ${modelName}`}
           </span>
         </div>
@@ -111,12 +111,12 @@ export function DownloadSummary({ totalModels, downloadedModels, totalSizeMb }: 
   };
 
   return (
-    <div className="bg-gray-50 rounded-lg p-3 text-sm">
+    <div className="bg-surface-secondary rounded-lg p-3 text-sm">
       <div className="flex items-center justify-between">
-        <span className="text-gray-700">
+        <span className="text-text-primary">
           📦 {downloadedModels} of {totalModels} models available
         </span>
-        <span className="text-gray-600">
+        <span className="text-text-secondary">
           💾 {formatSize(totalSizeMb)} total
         </span>
       </div>

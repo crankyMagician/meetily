@@ -48,7 +48,7 @@ export const AudioPlayer = memo(function AudioPlayer({
 }: AudioPlayerProps) {
   if (error) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-200 bg-gray-50 text-gray-400 text-xs">
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-surface-secondary text-text-placeholder text-xs">
         <VolumeX className="w-4 h-4" />
         <span>No audio available</span>
       </div>
@@ -57,7 +57,7 @@ export const AudioPlayer = memo(function AudioPlayer({
 
   if (duration === 0) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-gray-200 bg-gray-50 text-gray-400 text-xs">
+      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-surface-secondary text-text-placeholder text-xs">
         <Volume2 className="w-4 h-4 animate-pulse" />
         <span>Loading audio...</span>
       </div>
@@ -70,12 +70,12 @@ export const AudioPlayer = memo(function AudioPlayer({
     const speakerButtons = speakers && speakers.length > 0 ? speakers : null;
 
     return (
-      <div className="border-t border-gray-200 bg-blue-50 px-3 py-2 space-y-2">
+      <div className="border-t border-border bg-blue-50 dark:bg-blue-950 px-3 py-2 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={isPlaying ? onPause : onPlay}
-              className="p-1 rounded hover:bg-blue-100 transition-colors"
+              className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
             >
               {isPlaying ? <Pause className="w-4 h-4 text-blue-600" /> : <Play className="w-4 h-4 text-blue-600" />}
             </button>
@@ -122,7 +122,7 @@ export const AudioPlayer = memo(function AudioPlayer({
           )}
           <button
             onClick={onSkipSegment}
-            className="py-1.5 px-3 text-sm text-gray-500 hover:text-gray-700 hover:underline"
+            className="py-1.5 px-3 text-sm text-muted-foreground hover:text-text-primary hover:underline"
           >
             Skip
           </button>
@@ -133,15 +133,15 @@ export const AudioPlayer = memo(function AudioPlayer({
 
   // Normal player UI
   return (
-    <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 space-y-1">
+    <div className="border-t border-border bg-surface-secondary px-3 py-2 space-y-1">
       <div className="flex items-center gap-2">
         <button
           onClick={isPlaying ? onPause : onPlay}
-          className="p-1 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
+          className="p-1 rounded hover:bg-surface-hover transition-colors flex-shrink-0"
         >
-          {isPlaying ? <Pause className="w-4 h-4 text-gray-700" /> : <Play className="w-4 h-4 text-gray-700" />}
+          {isPlaying ? <Pause className="w-4 h-4 text-text-primary" /> : <Play className="w-4 h-4 text-text-primary" />}
         </button>
-        <span className="text-xs text-gray-500 min-w-[36px] tabular-nums">{formatTime(currentTime)}</span>
+        <span className="text-xs text-muted-foreground min-w-[36px] tabular-nums">{formatTime(currentTime)}</span>
         <input
           type="range"
           min={0}
@@ -149,9 +149,9 @@ export const AudioPlayer = memo(function AudioPlayer({
           step={0.1}
           value={currentTime}
           onChange={(e) => onSeek(parseFloat(e.target.value))}
-          className="flex-1 h-1 bg-gray-300 rounded-full appearance-none cursor-pointer accent-blue-600 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:appearance-none"
+          className="flex-1 h-1 bg-surface-hover rounded-full appearance-none cursor-pointer accent-blue-600 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:appearance-none"
         />
-        <span className="text-xs text-gray-500 min-w-[36px] tabular-nums">{formatTime(duration)}</span>
+        <span className="text-xs text-muted-foreground min-w-[36px] tabular-nums">{formatTime(duration)}</span>
       </div>
       {unassignedCount > 0 && onStartReview && (
         <div className="flex justify-center">

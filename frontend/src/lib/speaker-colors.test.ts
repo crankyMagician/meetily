@@ -5,6 +5,7 @@ import {
   getNextAvailableColor,
   getPaletteForColor,
   getPaletteForSpeakerKey,
+  getThemedClasses,
 } from './speaker-colors';
 
 // ── SPEAKER_PALETTES tests ────────────────────────────────────────
@@ -23,6 +24,17 @@ describe('SPEAKER_PALETTES', () => {
       expect(p).toHaveProperty('border');
       expect(p).toHaveProperty('dot');
       expect(p).toHaveProperty('hex');
+      expect(p).toHaveProperty('darkBg');
+      expect(p).toHaveProperty('darkText');
+      expect(p).toHaveProperty('darkBorder');
+    }
+  });
+
+  it('dark classes follow tailwind dark: prefix pattern', () => {
+    for (const p of SPEAKER_PALETTES) {
+      expect(p.darkBg).toBe(`dark:bg-${p.key}-950`);
+      expect(p.darkText).toBe(`dark:text-${p.key}-300`);
+      expect(p.darkBorder).toBe(`dark:border-${p.key}-800`);
     }
   });
 
@@ -145,5 +157,27 @@ describe('getPaletteForSpeakerKey', () => {
     const r1 = getPaletteForSpeakerKey(key);
     const r2 = getPaletteForSpeakerKey(key);
     expect(r1).toEqual(r2);
+  });
+});
+
+// ── getThemedClasses tests ──────────────────────────────────────
+
+describe('getThemedClasses', () => {
+  it('combines light and dark bg classes', () => {
+    const palette = getPaletteForColor('blue');
+    const themed = getThemedClasses(palette);
+    expect(themed.bg).toBe('bg-blue-50 dark:bg-blue-950');
+  });
+
+  it('combines light and dark text classes', () => {
+    const palette = getPaletteForColor('purple');
+    const themed = getThemedClasses(palette);
+    expect(themed.text).toBe('text-purple-700 dark:text-purple-300');
+  });
+
+  it('combines light and dark border classes', () => {
+    const palette = getPaletteForColor('red');
+    const themed = getThemedClasses(palette);
+    expect(themed.border).toBe('border-red-200 dark:border-red-800');
   });
 });

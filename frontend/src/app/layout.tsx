@@ -9,8 +9,10 @@ import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { Toaster, toast } from 'sonner'
 import "sonner/dist/styles.css"
 import { useState, useEffect } from 'react'
+import { useTheme } from 'next-themes'
 import { listen } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
+import { ThemeProvider } from 'next-themes'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { RecordingStateProvider } from '@/contexts/RecordingStateContext'
 import { OllamaDownloadProvider } from '@/contexts/OllamaDownloadContext'
@@ -29,6 +31,11 @@ const sourceSans3 = Source_Sans_3({
 })
 
 // export { metadata } from './metadata'
+
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme();
+  return <Toaster position="bottom-center" richColors closeButton theme={resolvedTheme === 'dark' ? 'dark' : 'light'} />;
+}
 
 export default function RootLayout({
   children,
@@ -98,8 +105,9 @@ export default function RootLayout({
   }
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${sourceSans3.variable} font-sans antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <AnalyticsProvider>
           <RecordingStateProvider>
             <TranscriptProvider>
@@ -133,7 +141,8 @@ export default function RootLayout({
             </TranscriptProvider>
           </RecordingStateProvider>
         </AnalyticsProvider>
-        <Toaster position="bottom-center" richColors closeButton />
+        <ThemedToaster />
+        </ThemeProvider>
       </body>
     </html>
   )

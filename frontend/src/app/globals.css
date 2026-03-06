@@ -103,6 +103,20 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    /* Semantic surface colors */
+    --surface: 0 0% 100%;
+    --surface-secondary: 210 20% 98%;
+    --surface-tertiary: 220 14% 96%;
+    --surface-hover: 220 13% 91%;
+    /* Semantic text colors */
+    --text-primary: 220 9% 30%;
+    --text-secondary: 220 9% 38%;
+    --text-placeholder: 218 11% 65%;
+    /* Semantic border */
+    --border-subtle: 220 14% 96%;
+    /* Scrollbar */
+    --scrollbar-thumb: 220 13% 83%;
+    --scrollbar-thumb-hover: 218 11% 65%;
   }
 
   .dark {
@@ -130,6 +144,20 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    /* Semantic surface colors */
+    --surface: 0 0% 7%;
+    --surface-secondary: 0 0% 10%;
+    --surface-tertiary: 0 0% 14%;
+    --surface-hover: 0 0% 18%;
+    /* Semantic text colors */
+    --text-primary: 0 0% 90%;
+    --text-secondary: 0 0% 75%;
+    --text-placeholder: 0 0% 50%;
+    /* Semantic border */
+    --border-subtle: 0 0% 14%;
+    /* Scrollbar */
+    --scrollbar-thumb: 0 0% 30%;
+    --scrollbar-thumb-hover: 0 0% 40%;
   }
 }
 
@@ -166,18 +194,18 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: hsl(var(--scrollbar-thumb));
     border-radius: 3px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: hsl(var(--scrollbar-thumb-hover));
   }
 
   /* Firefox scrollbar */
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #d1d5db transparent;
+    scrollbar-color: hsl(var(--scrollbar-thumb)) transparent;
   }
 
   /* BlockNote Editor - Override fixed dimensions for responsive layout */

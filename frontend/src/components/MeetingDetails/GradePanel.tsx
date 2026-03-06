@@ -15,28 +15,28 @@ function ScoreBar({ score, label }: { score: number; label: string }) {
   const color = score >= 8 ? 'bg-green-500' : score >= 6 ? 'bg-yellow-500' : score >= 4 ? 'bg-orange-500' : 'bg-red-500';
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-600 w-40 shrink-0">{label}</span>
-      <div className="flex-1 bg-gray-100 rounded-full h-2.5">
+      <span className="text-sm text-text-secondary w-40 shrink-0">{label}</span>
+      <div className="flex-1 bg-surface-tertiary rounded-full h-2.5">
         <div
           className={`h-2.5 rounded-full ${color} transition-all duration-500`}
           style={{ width: `${score * 10}%` }}
         />
       </div>
-      <span className="text-sm font-medium text-gray-700 w-8 text-right">{score}</span>
+      <span className="text-sm font-medium text-text-primary w-8 text-right">{score}</span>
     </div>
   );
 }
 
 function OverallScore({ score }: { score: number }) {
-  const color = score >= 8 ? 'text-green-600' : score >= 6 ? 'text-yellow-600' : score >= 4 ? 'text-orange-600' : 'text-red-600';
-  const bgColor = score >= 8 ? 'bg-green-50' : score >= 6 ? 'bg-yellow-50' : score >= 4 ? 'bg-orange-50' : 'bg-red-50';
-  const borderColor = score >= 8 ? 'border-green-200' : score >= 6 ? 'border-yellow-200' : score >= 4 ? 'border-orange-200' : 'border-red-200';
+  const color = score >= 8 ? 'text-green-600 dark:text-green-400' : score >= 6 ? 'text-yellow-600 dark:text-yellow-400' : score >= 4 ? 'text-orange-600 dark:text-orange-400' : 'text-red-600 dark:text-red-400';
+  const bgColor = score >= 8 ? 'bg-green-50 dark:bg-green-950' : score >= 6 ? 'bg-yellow-50 dark:bg-yellow-950' : score >= 4 ? 'bg-orange-50 dark:bg-orange-950' : 'bg-red-50 dark:bg-red-950';
+  const borderColor = score >= 8 ? 'border-green-200 dark:border-green-800' : score >= 6 ? 'border-yellow-200 dark:border-yellow-800' : score >= 4 ? 'border-orange-200 dark:border-orange-800' : 'border-red-200 dark:border-red-800';
 
   return (
     <div className={`flex items-center justify-center p-6 rounded-xl ${bgColor} border ${borderColor}`}>
       <div className="text-center">
         <div className={`text-5xl font-bold ${color}`}>{score}</div>
-        <div className="text-sm text-gray-500 mt-1">out of 10</div>
+        <div className="text-sm text-muted-foreground mt-1">out of 10</div>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ function GradingConfigForm({ onSubmit }: { onSubmit: (options: GradingOptions) =
     <div className="space-y-4">
       {/* Grade Target */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Who to grade</label>
+        <label className="text-sm font-medium text-text-primary mb-2 block">Who to grade</label>
         <div className="flex gap-2">
           {([
             { value: 'me' as const, label: 'Grade me' },
@@ -63,8 +63,8 @@ function GradingConfigForm({ onSubmit }: { onSubmit: (options: GradingOptions) =
               onClick={() => setGradeTarget(option.value)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 gradeTarget === option.value
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                  : 'bg-surface-secondary text-text-secondary border border-border hover:bg-surface-tertiary'
               }`}
             >
               {option.label}
@@ -75,25 +75,25 @@ function GradingConfigForm({ onSubmit }: { onSubmit: (options: GradingOptions) =
 
       {/* Your Role */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Your role (optional)</label>
+        <label className="text-sm font-medium text-text-primary mb-1 block">Your role (optional)</label>
         <input
           type="text"
           value={userRole}
           onChange={(e) => setUserRole(e.target.value)}
           placeholder="e.g., Sales rep, Interviewer, Manager"
-          className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
 
       {/* Focus Areas */}
       <div>
-        <label className="text-sm font-medium text-gray-700 mb-1 block">Focus areas (optional)</label>
+        <label className="text-sm font-medium text-text-primary mb-1 block">Focus areas (optional)</label>
         <textarea
           value={focusAreas}
           onChange={(e) => setFocusAreas(e.target.value)}
           placeholder="e.g., How well I handled the pricing objection, clarity of my technical explanation"
           rows={2}
-          className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
         />
       </div>
 
@@ -115,9 +115,9 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
   if (status === 'idle') {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6">
-        <Award className="w-10 h-10 text-gray-300 mb-3" />
-        <h3 className="text-lg font-medium text-gray-700 mb-1">Communication Grade</h3>
-        <p className="text-sm text-gray-500 mb-5 max-w-sm text-center">
+        <Award className="w-10 h-10 text-text-placeholder mb-3" />
+        <h3 className="text-lg font-medium text-text-primary mb-1">Communication Grade</h3>
+        <p className="text-sm text-muted-foreground mb-5 max-w-sm text-center">
           Get AI-powered feedback on communication skills based on this meeting&apos;s transcript.
         </p>
         <div className="w-full max-w-sm">
@@ -131,7 +131,7 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
         <LoaderIcon className="w-8 h-8 animate-spin text-blue-500 mb-4" />
-        <p className="text-sm text-gray-600">Analyzing communication...</p>
+        <p className="text-sm text-text-secondary">Analyzing communication...</p>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
 
       {/* Category Breakdown */}
       <div>
-        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+        <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-1.5">
           <Target className="w-4 h-4" />
           Category Scores
         </h4>
@@ -168,7 +168,7 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
             <div key={cat.name}>
               <ScoreBar score={cat.score} label={cat.name} />
               {cat.feedback && (
-                <p className="text-xs text-gray-500 ml-[172px] mt-0.5">{cat.feedback}</p>
+                <p className="text-xs text-muted-foreground ml-[172px] mt-0.5">{cat.feedback}</p>
               )}
             </div>
           ))}
@@ -178,13 +178,13 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
       {/* Strengths */}
       {result.strengths.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-1.5">
+          <h4 className="text-sm font-semibold text-green-700 dark:text-green-400 mb-2 flex items-center gap-1.5">
             <TrendingUp className="w-4 h-4" />
             Strengths
           </h4>
           <ul className="space-y-1.5">
             {result.strengths.map((s, i) => (
-              <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+              <li key={i} className="text-sm text-text-secondary flex items-start gap-2">
                 <span className="text-green-500 mt-0.5">+</span>
                 {s}
               </li>
@@ -196,13 +196,13 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
       {/* Areas for Improvement */}
       {result.areas_for_improvement.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-orange-700 mb-2 flex items-center gap-1.5">
+          <h4 className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-2 flex items-center gap-1.5">
             <Target className="w-4 h-4" />
             Areas to Improve
           </h4>
           <ul className="space-y-1.5">
             {result.areas_for_improvement.map((a, i) => (
-              <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+              <li key={i} className="text-sm text-text-secondary flex items-start gap-2">
                 <span className="text-orange-500 mt-0.5">-</span>
                 {a}
               </li>
@@ -214,13 +214,13 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
       {/* Actionable Tips */}
       {result.actionable_tips.length > 0 && (
         <div>
-          <h4 className="text-sm font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
+          <h4 className="text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-1.5">
             <Lightbulb className="w-4 h-4" />
             Actionable Tips
           </h4>
           <ul className="space-y-1.5">
             {result.actionable_tips.map((t, i) => (
-              <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
+              <li key={i} className="text-sm text-text-secondary flex items-start gap-2">
                 <span className="text-blue-500 font-medium mt-0.5">{i + 1}.</span>
                 {t}
               </li>
@@ -230,10 +230,10 @@ export const GradePanel = memo(function GradePanel({ status, result, error, onGe
       )}
 
       {/* Regenerate */}
-      <div className="pt-2 border-t border-gray-100">
+      <div className="pt-2 border-t border-border-subtle">
         <button
           onClick={() => onGenerate()}
-          className="text-xs text-gray-500 hover:text-blue-600 transition-colors"
+          className="text-xs text-muted-foreground hover:text-blue-600 transition-colors"
         >
           Regenerate grade
         </button>

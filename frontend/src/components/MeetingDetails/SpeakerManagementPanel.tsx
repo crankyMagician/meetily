@@ -88,7 +88,7 @@ const EditableName = memo(function EditableName({
           if (e.key === 'Enter') handleSubmit();
           if (e.key === 'Escape') { setValue(name); setIsEditing(false); }
         }}
-        className="text-sm font-medium bg-white border border-gray-300 rounded px-1 py-0 outline-none focus:border-blue-400 w-full max-w-[120px]"
+        className="text-sm font-medium bg-surface border border-input rounded px-1 py-0 outline-none focus:border-blue-400 w-full max-w-[120px]"
       />
     );
   }
@@ -97,7 +97,7 @@ const EditableName = memo(function EditableName({
     <button
       type="button"
       onClick={() => setIsEditing(true)}
-      className="text-sm font-medium text-gray-800 hover:text-blue-600 truncate max-w-[120px] text-left"
+      className="text-sm font-medium text-foreground hover:text-blue-600 truncate max-w-[120px] text-left"
       title="Click to rename"
     >
       {name}
@@ -147,16 +147,16 @@ const SpeakerRow = memo(function SpeakerRow({
       </div>
 
       {/* Segment count */}
-      <span className="text-xs text-gray-400 flex-shrink-0 tabular-nums">{count}</span>
+      <span className="text-xs text-text-placeholder flex-shrink-0 tabular-nums">{count}</span>
 
       {/* Actions menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-100 transition-opacity"
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-surface-tertiary transition-opacity"
           >
-            <MoreHorizontal className="w-3.5 h-3.5 text-gray-400" />
+            <MoreHorizontal className="w-3.5 h-3.5 text-text-placeholder" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
@@ -240,12 +240,12 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
   }, [meetingId, modelConfig, onRefreshSpeakers]);
 
   return (
-    <div className="border-b border-gray-100">
+    <div className="border-b border-border-subtle">
       {/* Header - always visible */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1.5 w-full px-1 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+        className="flex items-center gap-1.5 w-full px-1 py-1.5 text-xs text-muted-foreground hover:text-text-primary"
       >
         {isExpanded ? (
           <ChevronDown className="w-3 h-3" />
@@ -253,7 +253,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
           <ChevronRight className="w-3 h-3" />
         )}
         <span className="font-medium">Speakers</span>
-        <span className="text-gray-400">({speakers.length})</span>
+        <span className="text-text-placeholder">({speakers.length})</span>
         {unassignedCount > 0 && (
           <span className="ml-auto text-amber-600">{unassignedCount} unassigned</span>
         )}
@@ -277,7 +277,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
 
           {/* Unassigned bulk assign */}
           {unassignedCount > 0 && onBulkAssignSpeaker && (
-            <div className="mt-1 px-1 text-xs text-gray-500">
+            <div className="mt-1 px-1 text-xs text-muted-foreground">
               {unassignedCount} unassigned —{' '}
               {speakers.slice(0, 3).map((s, i) => {
                 const palette = getPaletteForColor(s.color);
@@ -307,7 +307,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 placeholder="Speaker name..."
-                className="flex-1 text-sm border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-blue-400"
+                className="flex-1 text-sm border border-border rounded px-2 py-0.5 outline-none focus:border-blue-400"
                 onKeyDown={e => { if (e.key === 'Escape') { setIsAddingNew(false); setNewName(''); } }}
               />
               <button
@@ -320,7 +320,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
               <button
                 type="button"
                 onClick={() => { setIsAddingNew(false); setNewName(''); }}
-                className="text-xs px-1 text-gray-400 hover:text-gray-600"
+                className="text-xs px-1 text-text-placeholder hover:text-text-secondary"
               >
                 Cancel
               </button>
@@ -330,7 +330,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
               <button
                 type="button"
                 onClick={() => setIsAddingNew(true)}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-blue-600"
               >
                 <Plus className="w-3 h-3" />
                 Add Speaker
@@ -339,7 +339,7 @@ export const SpeakerManagementPanel = memo(function SpeakerManagementPanel({
                 type="button"
                 onClick={handleIdentifySpeakers}
                 disabled={isIdentifying}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-purple-600 disabled:opacity-50 ml-auto"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-purple-600 disabled:opacity-50 ml-auto"
                 title="Use AI to identify and assign speakers"
               >
                 {isIdentifying ? (

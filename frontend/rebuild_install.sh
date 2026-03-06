@@ -25,8 +25,11 @@ fi
 
 echo "==> Installing to /Applications..."
 # Kill running instance if any
+pkill -f "meetily.app/Contents/MacOS/meetily" 2>/dev/null || true
 pkill -f "Meetily.app/Contents/MacOS/meetily" 2>/dev/null || true
 sleep 1
+# Remove old app bundle completely before copying (cp -R can fail to overwrite signed bundles)
+rm -rf /Applications/meetily.app /Applications/Meetily.app 2>/dev/null
 cp -R "$APP_BUNDLE" /Applications/Meetily.app
 
 echo "==> Done! Meetily installed to /Applications/Meetily.app"

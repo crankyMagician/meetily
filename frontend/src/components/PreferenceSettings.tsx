@@ -6,6 +6,7 @@ import { FolderOpen } from "lucide-react"
 import { invoke } from "@tauri-apps/api/core"
 import Analytics from "@/lib/analytics"
 import AnalyticsConsentSwitch from "./AnalyticsConsentSwitch"
+import { ThemeToggle } from "./ThemeToggle"
 import { useConfig, NotificationSettings } from "@/contexts/ConfigContext"
 
 export function PreferenceSettings() {
@@ -180,11 +181,22 @@ export function PreferenceSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Your Name Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      {/* Appearance Section */}
+      <div className="bg-surface rounded-lg border border-border p-6 shadow-sm">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Your Name</h3>
-          <p className="text-sm text-gray-600 mb-4">
+          <h3 className="text-lg font-semibold text-foreground mb-2">Appearance</h3>
+          <p className="text-sm text-text-secondary mb-4">
+            Choose your preferred theme
+          </p>
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* Your Name Section */}
+      <div className="bg-surface rounded-lg border border-border p-6 shadow-sm">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">Your Name</h3>
+          <p className="text-sm text-text-secondary mb-4">
             Used to label your microphone audio in transcripts and grading
           </p>
           <div className="flex items-center gap-3">
@@ -193,7 +205,7 @@ export function PreferenceSettings() {
               value={displayName}
               onChange={(e) => handleDisplayNameChange(e.target.value)}
               placeholder="Enter your name"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             {displayNameSaved && (
               <span className="text-sm text-green-600">Saved</span>
@@ -203,33 +215,33 @@ export function PreferenceSettings() {
       </div>
 
       {/* Notifications Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="bg-surface rounded-lg border border-border p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Notifications</h3>
-            <p className="text-sm text-gray-600">Enable or disable notifications of start and end of meeting</p>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Notifications</h3>
+            <p className="text-sm text-text-secondary">Enable or disable notifications of start and end of meeting</p>
           </div>
           <Switch checked={notificationsEnabledValue} onCheckedChange={setNotificationsEnabled} />
         </div>
       </div>
 
       {/* Data Storage Locations Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Storage Locations</h3>
-        <p className="text-sm text-gray-600 mb-6">
+      <div className="bg-surface rounded-lg border border-border p-6 shadow-sm">
+        <h3 className="text-lg font-semibold text-foreground mb-4">Data Storage Locations</h3>
+        <p className="text-sm text-text-secondary mb-6">
           View and access where Meetily stores your data
         </p>
 
         <div className="space-y-4">
           {/* Database Location */}
-          {/* <div className="p-4 border rounded-lg bg-gray-50">
+          {/* <div className="p-4 border rounded-lg bg-surface-secondary">
             <div className="font-medium mb-2">Database</div>
-            <div className="text-sm text-gray-600 mb-3 break-all font-mono text-xs">
+            <div className="text-sm text-text-secondary mb-3 break-all font-mono text-xs">
               {storageLocations?.database || 'Loading...'}
             </div>
             <button
               onClick={() => handleOpenFolder('database')}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-input rounded-md hover:bg-surface-tertiary transition-colors"
             >
               <FolderOpen className="w-4 h-4" />
               Open Folder
@@ -237,14 +249,14 @@ export function PreferenceSettings() {
           </div> */}
 
           {/* Models Location */}
-          {/* <div className="p-4 border rounded-lg bg-gray-50">
+          {/* <div className="p-4 border rounded-lg bg-surface-secondary">
             <div className="font-medium mb-2">Whisper Models</div>
-            <div className="text-sm text-gray-600 mb-3 break-all font-mono text-xs">
+            <div className="text-sm text-text-secondary mb-3 break-all font-mono text-xs">
               {storageLocations?.models || 'Loading...'}
             </div>
             <button
               onClick={() => handleOpenFolder('models')}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-input rounded-md hover:bg-surface-tertiary transition-colors"
             >
               <FolderOpen className="w-4 h-4" />
               Open Folder
@@ -252,14 +264,14 @@ export function PreferenceSettings() {
           </div> */}
 
           {/* Recordings Location */}
-          <div className="p-4 border rounded-lg bg-gray-50">
+          <div className="p-4 border rounded-lg bg-surface-secondary">
             <div className="font-medium mb-2">Meeting Recordings</div>
-            <div className="text-sm text-gray-600 mb-3 break-all font-mono text-xs">
+            <div className="text-sm text-text-secondary mb-3 break-all font-mono text-xs">
               {storageLocations?.recordings || 'Loading...'}
             </div>
             <button
               onClick={() => handleOpenFolder('recordings')}
-              className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 text-sm border border-input rounded-md hover:bg-surface-tertiary transition-colors"
             >
               <FolderOpen className="w-4 h-4" />
               Open Folder
@@ -267,15 +279,15 @@ export function PreferenceSettings() {
           </div>
         </div>
 
-        <div className="mt-4 p-3 bg-blue-50 rounded-md">
-          <p className="text-xs text-blue-800">
+        <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-md">
+          <p className="text-xs text-blue-800 dark:text-blue-200">
             <strong>Note:</strong> Database and models are stored together in your application data directory for unified management.
           </p>
         </div>
       </div>
 
       {/* Analytics Section */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+      <div className="bg-surface rounded-lg border border-border p-6 shadow-sm">
         <AnalyticsConsentSwitch />
       </div>
     </div>

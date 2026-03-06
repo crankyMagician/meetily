@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { getPaletteForColor, getPaletteForSpeakerKey } from '@/lib/speaker-colors';
+import { getPaletteForColor, getPaletteForSpeakerKey, getThemedClasses } from '@/lib/speaker-colors';
 
 interface SpeakerBadgeProps {
   name: string;
@@ -18,6 +18,7 @@ export function SpeakerBadge({ name, speakerKey, onRename, color }: SpeakerBadge
 
   // Use color-key palette when available, fall back to speaker-key hash
   const palette = color ? getPaletteForColor(color) : getPaletteForSpeakerKey(speakerKey);
+  const themed = getThemedClasses(palette);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -50,7 +51,7 @@ export function SpeakerBadge({ name, speakerKey, onRename, color }: SpeakerBadge
           if (e.key === 'Enter') handleSubmit();
           if (e.key === 'Escape') { setEditValue(name); setIsEditing(false); }
         }}
-        className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${palette.border} ${palette.bg} ${palette.text} outline-none`}
+        className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${themed.border} ${themed.bg} ${themed.text} outline-none`}
         style={{ width: `${Math.max(editValue.length, 3) * 8 + 16}px` }}
       />
     );
@@ -59,7 +60,7 @@ export function SpeakerBadge({ name, speakerKey, onRename, color }: SpeakerBadge
   return (
     <span
       onClick={() => onRename && setIsEditing(true)}
-      className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${palette.border} ${palette.bg} ${palette.text} ${onRename ? 'cursor-pointer hover:opacity-80' : ''}`}
+      className={`inline-block px-2 py-0.5 rounded text-xs font-medium border ${themed.border} ${themed.bg} ${themed.text} ${onRename ? 'cursor-pointer hover:opacity-80' : ''}`}
       title={onRename ? 'Click to rename' : undefined}
     >
       {name}

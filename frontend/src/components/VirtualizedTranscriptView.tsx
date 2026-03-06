@@ -125,7 +125,7 @@ const SpeakerDropdown = memo(function SpeakerDropdown({
                 ) : (
                     <button
                         type="button"
-                        className="inline-block px-2 py-0.5 rounded text-xs font-medium border border-dashed border-gray-300 bg-gray-50 text-gray-400 cursor-pointer hover:border-gray-400 hover:text-gray-500"
+                        className="inline-block px-2 py-0.5 rounded text-xs font-medium border border-dashed border-input bg-surface-secondary text-text-placeholder cursor-pointer hover:border-gray-400 hover:text-muted-foreground"
                         title="Click to assign speaker"
                     >
                         Unassigned
@@ -157,7 +157,7 @@ const SpeakerDropdown = memo(function SpeakerDropdown({
                                 value={newName}
                                 onChange={e => setNewName(e.target.value)}
                                 placeholder="Name..."
-                                className="flex-1 text-sm border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-blue-400"
+                                className="flex-1 text-sm border border-border rounded px-2 py-0.5 outline-none focus:border-blue-400"
                                 onKeyDown={e => { if (e.key === 'Escape') { setShowNewInput(false); setNewName(''); } }}
                             />
                             <button
@@ -176,7 +176,7 @@ const SpeakerDropdown = memo(function SpeakerDropdown({
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onSelect(null)} className="text-gray-500">
+                <DropdownMenuItem onClick={() => onSelect(null)} className="text-muted-foreground">
                     Unassign
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -241,7 +241,7 @@ const TranscriptSegment = memo(function TranscriptSegment({
                         className={`mt-1 flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
                             isSelected
                                 ? 'bg-blue-500 border-blue-500 text-white'
-                                : 'border-gray-300 opacity-0 group-hover:opacity-100 hover:border-gray-400'
+                                : 'border-input opacity-0 group-hover:opacity-100 hover:border-gray-400'
                         }`}
                     >
                         {isSelected && <Check className="w-3 h-3" />}
@@ -253,13 +253,13 @@ const TranscriptSegment = memo(function TranscriptSegment({
                         {onPlayClick ? (
                             <button
                                 onClick={() => onPlayClick(timestamp)}
-                                className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px] hover:text-blue-600 group/play flex items-center gap-0.5"
+                                className="text-xs text-text-placeholder mt-1 flex-shrink-0 min-w-[50px] hover:text-blue-600 group/play flex items-center gap-0.5"
                             >
                                 <Play className="w-3 h-3 hidden group-hover/play:inline-block" />
                                 <span className="group-hover/play:text-blue-600">{formatRecordingTime(timestamp)}</span>
                             </button>
                         ) : (
-                            <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
+                            <span className="text-xs text-text-placeholder mt-1 flex-shrink-0 min-w-[50px]">
                                 {formatRecordingTime(timestamp)}
                             </span>
                         )}
@@ -287,11 +287,11 @@ const TranscriptSegment = memo(function TranscriptSegment({
                 ) : null}
                 <div className="flex-1">
                     {isStreaming ? (
-                        <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
-                            <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                        <div className="bg-surface-tertiary border border-border rounded-lg px-3 py-2">
+                            <p className="text-base text-foreground leading-relaxed">{displayText}</p>
                         </div>
                     ) : (
-                        <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                        <p className="text-base text-foreground leading-relaxed">{displayText}</p>
                     )}
                 </div>
             </div>
@@ -312,8 +312,8 @@ const SelectionActionBar = memo(function SelectionActionBar({
     onClear: () => void;
 }) {
     return (
-        <div className="absolute bottom-4 left-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-3 flex items-center gap-3 z-20">
-            <span className="text-sm font-medium text-gray-700">{count} selected</span>
+        <div className="absolute bottom-4 left-4 right-4 bg-surface border border-border rounded-lg shadow-lg p-3 flex items-center gap-3 z-20">
+            <span className="text-sm font-medium text-text-primary">{count} selected</span>
             <div className="flex items-center gap-1.5 flex-1">
                 {speakers.map(s => {
                     const palette = getPaletteForColor(s.color);
@@ -333,7 +333,7 @@ const SelectionActionBar = memo(function SelectionActionBar({
             <button
                 type="button"
                 onClick={onClear}
-                className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                className="text-xs text-muted-foreground hover:text-text-primary flex items-center gap-1"
             >
                 <X className="w-3 h-3" />
                 Clear
@@ -561,7 +561,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
             {/* Recording Status Bar - Sticky at top, always visible when recording */}
             <AnimatePresence>
                 {isRecording && (
-                    <div className="sticky top-0 z-10 bg-white pb-2">
+                    <div className="sticky top-0 z-10 bg-surface pb-2">
                         <RecordingStatusBar isPaused={isPaused} />
                     </div>
                 )}
@@ -574,17 +574,17 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-center text-gray-500 mt-8"
+                    className="text-center text-muted-foreground mt-8"
                 >
                     {isRecording ? (
                         <>
                             <div className="flex items-center justify-center mb-3">
                                 <div className={`w-3 h-3 rounded-full ${isPaused ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-text-secondary">
                                 {isPaused ? 'Recording paused' : 'Listening for speech...'}
                             </p>
-                            <p className="text-xs mt-1 text-gray-400">
+                            <p className="text-xs mt-1 text-text-placeholder">
                                 {isPaused ? 'Click resume to continue recording' : 'Speak to see live transcription'}
                             </p>
                         </>
@@ -632,12 +632,12 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                     {(hasMore || isLoadingMore) && !isRecording && segments.length > 0 && (
                         <div ref={loadMoreTriggerRef} className="flex justify-center items-center py-4 mt-2">
                             {isLoadingMore ? (
-                                <div className="flex items-center gap-2 text-gray-500">
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <div className="w-4 h-4 border-2 border-input border-t-text-secondary rounded-full animate-spin" />
                                     <span className="text-sm">Loading more...</span>
                                 </div>
                             ) : hasMore && totalCount > 0 ? (
-                                <span className="text-sm text-gray-400">
+                                <span className="text-sm text-text-placeholder">
                                     Showing {loadedCount} of {totalCount} segments
                                 </span>
                             ) : null}
@@ -650,7 +650,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="flex items-center gap-2 mt-4 text-gray-500"
+                            className="flex items-center gap-2 mt-4 text-muted-foreground"
                         >
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                             <span className="text-sm">Listening...</span>
@@ -682,12 +682,12 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                     {(hasMore || isLoadingMore) && !isRecording && segments.length > 0 && (
                         <div ref={loadMoreTriggerRef} className="flex justify-center items-center py-4 mt-2">
                             {isLoadingMore ? (
-                                <div className="flex items-center gap-2 text-gray-500">
-                                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                    <div className="w-4 h-4 border-2 border-input border-t-text-secondary rounded-full animate-spin" />
                                     <span className="text-sm">Loading more...</span>
                                 </div>
                             ) : hasMore && totalCount > 0 ? (
-                                <span className="text-sm text-gray-400">
+                                <span className="text-sm text-text-placeholder">
                                     Showing {loadedCount} of {totalCount} segments
                                 </span>
                             ) : null}
@@ -700,7 +700,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="flex items-center gap-2 mt-4 text-gray-500"
+                            className="flex items-center gap-2 mt-4 text-muted-foreground"
                         >
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                             <span className="text-sm">Listening...</span>

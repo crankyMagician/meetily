@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 export default {
+  darkMode: 'class',
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,13 +10,38 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        // Consistent color palette
-        primary: "hsl(221, 83%, 53%)", // blue-600
-        secondary: "hsl(210, 40%, 96%)", // gray-50
-        accent: "hsl(221, 83%, 53%)", // blue-600
-        destructive: "hsl(0, 84%, 60%)", // red-500
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        surface: "hsl(var(--surface))",
+        'surface-secondary': "hsl(var(--surface-secondary))",
+        'surface-tertiary': "hsl(var(--surface-tertiary))",
+        'surface-hover': "hsl(var(--surface-hover))",
+        'text-primary': "hsl(var(--text-primary))",
+        'text-secondary': "hsl(var(--text-secondary))",
+        'text-placeholder': "hsl(var(--text-placeholder))",
+        'border-subtle': "hsl(var(--border-subtle))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        card: "hsl(var(--card))",
+        'card-foreground': "hsl(var(--card-foreground))",
+        popover: "hsl(var(--popover))",
+        'popover-foreground': "hsl(var(--popover-foreground))",
+        muted: "hsl(var(--muted))",
+        'muted-foreground': "hsl(var(--muted-foreground))",
+        accent: "hsl(var(--accent))",
+        'accent-foreground': "hsl(var(--accent-foreground))",
+        destructive: "hsl(var(--destructive))",
+        'destructive-foreground': "hsl(var(--destructive-foreground))",
+        // Brand colors (same in both themes)
+        primary: {
+          DEFAULT: "hsl(221, 83%, 53%)", // blue-600
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
       },
       fontSize: {
         'display': ['32px', { lineHeight: '1.2', fontWeight: '700' }],

@@ -38,7 +38,7 @@ export function ChatInput({ onSend, disabled = false, placeholder = "Ask about t
   };
 
   return (
-    <div className="flex items-end gap-2 p-3 border-t border-gray-100 bg-white">
+    <div className="flex items-end gap-2 p-3 border-t border-border-subtle bg-surface">
       <textarea
         ref={textareaRef}
         value={value}
@@ -48,7 +48,7 @@ export function ChatInput({ onSend, disabled = false, placeholder = "Ask about t
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className="flex-1 resize-none text-sm px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-white disabled:opacity-50"
+        className="flex-1 resize-none text-sm px-3 py-2 border border-border rounded-lg bg-surface-secondary text-foreground placeholder:text-text-placeholder focus:outline-none focus:ring-1 focus:ring-blue-400 focus:bg-surface disabled:opacity-50"
       />
       <button
         onClick={handleSend}

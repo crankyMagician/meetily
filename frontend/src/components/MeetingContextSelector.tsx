@@ -70,7 +70,7 @@ export function MeetingContextSelector({
       <select
         value={contextType || ''}
         onChange={(e) => handleTypeChange(e.target.value)}
-        className="text-xs px-2 py-1 border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-400"
+        className="text-xs px-2 py-1 border border-border rounded-md bg-surface text-text-secondary focus:outline-none focus:ring-1 focus:ring-blue-400"
         disabled={isSaving}
       >
         <option value="">Meeting type...</option>
@@ -84,11 +84,11 @@ export function MeetingContextSelector({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-gray-500">Meeting Type</label>
+        <label className="text-xs font-medium text-muted-foreground">Meeting Type</label>
         <select
           value={contextType || ''}
           onChange={(e) => handleTypeChange(e.target.value)}
-          className="text-sm px-2 py-1 border border-gray-200 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="text-sm px-2 py-1 border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-1 focus:ring-blue-400"
           disabled={isSaving}
         >
           <option value="">Select type...</option>
@@ -103,7 +103,7 @@ export function MeetingContextSelector({
           onChange={(e) => setContextNotes(e.target.value)}
           onBlur={handleNotesBlur}
           placeholder="Add context notes (e.g., Q4 pipeline review with enterprise prospect)"
-          className="w-full text-sm px-3 py-2 border border-gray-200 rounded-md bg-white text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
+          className="w-full text-sm px-3 py-2 border border-border rounded-md bg-surface text-text-primary placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-400 resize-none"
           rows={2}
           disabled={isSaving}
         />
